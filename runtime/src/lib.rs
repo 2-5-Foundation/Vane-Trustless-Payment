@@ -43,8 +43,9 @@ use pallet_transaction_payment::CurrencyAdapter;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-/// Import the template pallet.
-pub use pallet_template;
+
+pub use pallet_multisig_payment;
+pub use pallet_multisig;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -265,9 +266,24 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-/// Configure the pallet-template in pallets/template.
-impl pallet_template::Config for Runtime {
+
+impl pallet_multisig_payment::Config for Runtime {
+
+}
+
+parameter_types! {
+	pub const DepositBase: Balance =  1_500;
+	pub const DepositFactor: Balance = 1_000;
+}
+
+impl pallet_multisig::Config for Runtime {
 	type Event = Event;
+	type Call = Call;
+	type Currency = Balances;
+	type DepositBase = DepositBase;
+	type DepositFactor = DepositFactor;
+	type MaxSignatories = frame_support::traits::ConstU16<100>;
+	type WeightInfo = pallet_multisig::weights::SubstrateWeight<Runtime>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -287,7 +303,8 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
-		TemplateModule: pallet_template,
+		MultisigPayment: pallet_multisig_payment,
+		Multisig: pallet_multisig
 	}
 );
 
@@ -332,7 +349,7 @@ mod benches {
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
-		[pallet_template, TemplateModule]
+		[pallet_multisig_payment, MultisigPayment]
 	);
 }
 
