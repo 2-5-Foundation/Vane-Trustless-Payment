@@ -55,23 +55,30 @@ pub mod pallet {
 	#[pallet::getter(fn get_signers)]
 	pub(super) type Signers<T: Config> = StorageValue<_,AccountSigners<T>>;
 
+	// A struct by which it should be used as a source of signatures.
 	#[derive(Encode, Decode, Clone, Copy, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub struct AccountSigners<T>{
 		buyer: AccountFor<T>,
 		seller: AccountFor<T>,
-		resolver: Resolver<T>,
+		resolver: Option<Resolver<T>>,
 	}
 
+	// This will act as a dispute resolution methods. A user will have to choose which method
+	// is the best for a given dispute which may arise.
 	#[derive(Encode, Decode, Clone, Copy, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum Resolver<T>{
+		// A legal team if chosen will be authorized to sign the transaction
 		legal_team(AccountFor<T>),
+		// A governance vote ( A Dao ) wil have to vote to favor which way the transaction
+		// should be signed
 		governance,
 		//some future time feature
 		both(AccountFor<T>)
 	}
 
 
-
+    // A struct that should be used as a reference when a payee account is not provided.
+	// Mostly to be used in a trade payment.
 	#[derive(Encode, Decode, Clone, Copy, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub struct Order<T>{
 		order_number:u32,
@@ -80,12 +87,13 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-
+		// A multi-signature function that dispatches Balance's transfer Call.
 		#[pallet::weight(10)]
 		pub fn vane_pay(
 			origin: OriginFor<T>,
 			reference: Option<Order<T>>,
-			payee: T::AccountId
+			payee: Option<<T::Lookup as StaticLookup>::Source>,
+
 		) -> DispatchResult {
 
 			let buyer = ensure_signed(origin)?;
