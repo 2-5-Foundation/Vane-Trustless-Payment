@@ -21,18 +21,18 @@
 
 pub use pallet::*;
 
-#[cfg(test)]
-mod mock;
+//#[cfg(test)]
+//mod mock;
 
-#[cfg(test)]
-mod tests;
+//#[cfg(test)]
+//mod tests;
 mod helper;
 
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
+//#[cfg(feature = "runtime-benchmarks")]
+//mod benchmarking;
 
-//! A multi-signature pallet implemented for `Vane Payment System`
+// A multi-signature pallet implemented for `Vane Payment System`
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -44,13 +44,15 @@ pub mod pallet {
 	};
 	use super::helper::{AccountSigners, Order};
 
-	pub(super) type AccountFor<T> = <T::Lookup as StaticLookup>::Source;
+	pub(super) type AccountFor<T> = <frame_system::Config::Lookup as StaticLookup>::Source;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {}
+	pub trait Config: frame_system::Config {
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_signers)]
@@ -62,7 +64,7 @@ pub mod pallet {
 		CallExecuted{
 			multi_id: T::AccountId,
 			timestamp: T::BlockNumber,
-			result:
+
 		}
 	}
 

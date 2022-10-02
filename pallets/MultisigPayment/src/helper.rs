@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature ="std")no_std)]
 
-use super::pallet::{self,*};
+use super::pallet::*;
 
 pub use utils::*;
 pub mod utils{
@@ -73,14 +73,14 @@ pub mod utils{
 
 		// Now , we are only focusing legal team Resolver variant in multi_id generation
 		fn derive_multi_id(account_object: AccountSigners<T>) -> T::AccountId{
-			if is_resolver{
+
 				let (acc1, acc2, opt_acc3) = match account_object.get_resolver(){
 					Some(resolver) => {
 						return (account_object.get_buyer(),account_object.get_seller(),account_object.get_legal_account())
 					},
 					None => (account_object.get_buyer(),account_object.get_seller(),None)
 				};
-			}
+
 			todo!()
 		}
 	}
