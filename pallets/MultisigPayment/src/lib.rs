@@ -36,7 +36,6 @@ mod helper;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::{
@@ -44,7 +43,7 @@ pub mod pallet {
 	};
 	use super::helper::{AccountSigners, Order};
 
-	pub(super) type AccountFor<T> = <frame_system::Config::Lookup as StaticLookup>::Source;
+	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
@@ -55,6 +54,7 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
+	#[pallet::unbounded]
 	#[pallet::getter(fn get_signers)]
 	pub(super) type Signers<T: Config> = StorageValue<_,AccountSigners<T>>;
 
@@ -78,8 +78,8 @@ pub mod pallet {
 		#[pallet::weight(10)]
 		pub fn vane_pay(
 			origin: OriginFor<T>,
-			reference: Option<Order<T>>,
-			payee: Option<<T::Lookup as StaticLookup>::Source>,
+			//reference: Option<Order<T>>,
+			payee: Option<AccountFor<T>>,
 
 		) -> DispatchResult {
 

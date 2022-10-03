@@ -45,7 +45,7 @@ pub use sp_runtime::{Perbill, Permill};
 
 
 pub use pallet_multisig_payment;
-pub use pallet_multisig;
+
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -268,7 +268,7 @@ impl pallet_sudo::Config for Runtime {
 
 
 impl pallet_multisig_payment::Config for Runtime {
-
+	type  Event = Event;
 }
 
 parameter_types! {
