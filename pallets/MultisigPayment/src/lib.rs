@@ -38,9 +38,7 @@ mod helper;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::{
-		traits::{StaticLookup}
-	};
+	use sp_runtime::{BoundedSlice, traits::{StaticLookup}};
 	use super::helper::{AccountSigners, Order};
 
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
@@ -51,12 +49,18 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
 	}
 
 	#[pallet::storage]
 	#[pallet::unbounded]
+	#[pallet::getter(fn get_allowed_signers)]
+	pub(super) type AllowedSigners<T: Config> = StorageValue<_,AccountSigners<T>>;
+
+	#[pallet::storage]
+	#[pallet::unbounded]
 	#[pallet::getter(fn get_signers)]
-	pub(super) type Signers<T: Config> = StorageValue<_,AccountSigners<T>>;
+	pub(super) type Signers<T: Config> = StorageValue<_,Vec<T::AccountId>,ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -70,8 +74,8 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		// A multi-signature function that dispatches Balance's transfer Call.
-		// Call dispatch info contains {weight, class, pays_fee}
+		// A call that transfers fund from a buyer to a multi-owned account.
+		//
 
 		// Tasks:
 		// 1. Add filter to the call so that only an origin from AccountSigner can be an origin

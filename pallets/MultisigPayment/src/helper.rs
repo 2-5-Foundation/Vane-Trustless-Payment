@@ -1,5 +1,12 @@
 #![cfg_attr(not(feature ="std"),no_std)]
 
+// Helper utilities.
+// The creation of a multi_account_id should be internal and opaque to the outside world.
+// Functionalities present
+// 1. Deriving multi acccount id
+// 2. Creation multi account id storage
+//
+
 use super::pallet::*;
 use frame_system::pallet_prelude::*;
 use frame_support::pallet_prelude::*;
@@ -81,8 +88,13 @@ pub mod utils{
 
 	impl<T:Config> Pallet<T>{
 
+		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult{
+
+			Ok(())
+		}
+
 		// Now , we are only focusing legal team Resolver variant in multi_id generation
-		fn derive_multi_id(account_object: AccountSigners<T>) -> T::AccountId{
+		pub(crate) fn derive_multi_id(account_object: AccountSigners<T>) -> T::AccountId{
 
 				let (acc1, acc2, opt_acc3) =
 					match account_object.get_resolver(){
