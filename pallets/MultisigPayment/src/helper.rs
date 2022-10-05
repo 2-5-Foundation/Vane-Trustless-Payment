@@ -91,6 +91,11 @@ pub mod utils{
 
 	impl<T:Config> Pallet<T>{
 
+		// Inner functionality for the opening of multisig account
+		pub(crate) fn inner_operate(origin: T::AccountId, multi_id: T::AccountId) -> DispatchResult{
+			Ok(())
+		}
+
 		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult{
 
 
