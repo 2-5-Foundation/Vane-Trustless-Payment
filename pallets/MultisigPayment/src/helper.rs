@@ -29,6 +29,17 @@ pub mod utils{
 		resolver: Option<Resolver<T>>,
 	}
 
+	/// The full account information for a particular account ID.
+	// #[pallet::storage]
+	// #[pallet::getter(fn account)]
+	// pub type Account<T: Config> = StorageMap<
+	// 	_,
+	// 	Blake2_128Concat,
+	// 	T::AccountId,
+	// 	AccountInfo<T::Index, T::AccountData>,
+	// 	ValueQuery,
+	// >;
+
 	// This will act as a dispute resolution methods. A user will have to choose which method
 	// is the best for a given dispute which may arise.
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -89,6 +100,13 @@ pub mod utils{
 	impl<T:Config> Pallet<T>{
 
 		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult{
+
+			let account_signer = AccountSigners::new{
+				buyer: "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY",
+				seller: "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty",
+				resolver:"5FngjPYz7yGqrPZ8cvd1jPFS3tpTSqErjS7377Kw3izE4DMZ",
+			 } ;
+			 let result = Self::derive_multi_id(account_signer);
 
 			Ok(())
 		}
