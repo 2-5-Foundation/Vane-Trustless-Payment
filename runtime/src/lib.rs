@@ -295,7 +295,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
 
-		MultisigPayment: pallet_multisig_payment,
+		VanePayment: pallet_multisig_payment,
 	}
 );
 
