@@ -46,6 +46,14 @@ pub mod utils{
 		Both(T::AccountId)
 	}
 
+	// This should be used as a parameter for choosing which Resolving method should take place
+	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	pub enum ResolverChoice{
+		LegalTeam,
+		Governance,
+	}
+
+
 	impl<T> AccountSigners<T> where T:Config{
 		pub(super) fn new(
 			payer: T::AccountId,
@@ -79,22 +87,22 @@ pub mod utils{
 	}
 
 
-	// A struct that should be used as a reference when a payee account is not provided.
-	// Mostly to be used in a trade payment.
-	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-	#[scale_info(skip_type_params(T))]
-	pub struct Order<T: Config>{
-		order_number:u32,
-		account: T::AccountId
-	}
-
 	// Revert Fund reasons enum
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum RevertReasons{
-		// The fee will be refunded
+		// The fee will be refunded, the payer must show a proof of wrong address.
 		WrongPayeeAddress,
-		// We should introduce sort of punishment
-		ChangeOfDecision
+		// We should introduce sort of punishment, This reason should be taken seriously and
+		// at the moment it should be only used in non trade operation.
+		ChangeOfDecision,
+		// Seller's fault, this is when a resolver intervene
+		PayeeMisbehaviour
+	}
+
+	// Seller's reason to make fund go through when a buyer misbehave
+	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	pub enum PayeeReason {
+		PayerMisbehaviour
 	}
 
 	// Confirmation enum which will be used to confirm the account_ids before dispatching multi-sig Call
@@ -106,18 +114,25 @@ pub mod utils{
 	}
 
 
+
 	impl<T:Config> Pallet<T>{
 
 		// Inner functionality for the opening of multisig account
-		pub(crate) fn inner_operate(buyer: T::AccountId, multi_id: T::AccountId) -> DispatchResult{
-			//let Accounts = AccountSigners::new(buyer,mu)
+		pub(crate) fn inner_vane_pay_wo_resolver(
+			payer: T::AccountId,
+			payee: T::AccountId,
+
+		) -> DispatchResult{
+
+			let Accounts = AccountSigners::<T>::new(payer,payee,None);
+			let multi_id = Self::derive_multi_id(Accounts);
+
 			Ok(())
 		}
 
 
 		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult{
-
-
+			
 			Ok(())
 		}
 
