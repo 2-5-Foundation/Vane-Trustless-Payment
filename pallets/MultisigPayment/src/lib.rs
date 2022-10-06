@@ -69,7 +69,8 @@ pub mod pallet {
 			multi_id: T::AccountId,
 			timestamp: T::BlockNumber,
 
-		}
+		},
+		AccountAddressStored(T::AccountId),
 	}
 
 	#[pallet::call]
@@ -99,7 +100,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Get the confirm accout address and store them in Signers Storage Item. Sort and make sure
+		// Get the confirm account address and store them in Signers Storage Item. Sort and make sure
 		// buyer's address is first
 		// Always make sure if its the buyer, he should be first in the vector,
 		// 		1. Store the account_id in the Signer Storage Item,
@@ -107,6 +108,17 @@ pub mod pallet {
 
 		#[pallet::weight(10)]
 		pub fn confirm(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
+			let who = ensure_signed(origin)?;
+
+			let bounded_keys = Vec::<AccountFor<T>>::try_from((who).clone());
+			
+			// Storing confirmed account address
+			Signers::<T>::put(bounded_keys);
+
+			// Emitting storage event.
+			Self::deposit_event(Event::AccountAddressStored(who));
+			// Return a successful DispatchResultWithPostInfo
+			
 			Ok(())
 		}
 	}
