@@ -26,8 +26,8 @@ pub mod utils{
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct AccountSigners<T: Config>{
-		buyer: T::AccountId,
-		seller: T::AccountId,
+		payer: T::AccountId,
+		payee: T::AccountId,
 		resolver: Option<Resolver<T>>,
 	}
 
@@ -48,22 +48,22 @@ pub mod utils{
 
 	impl<T> AccountSigners<T> where T:Config{
 		pub(super) fn new(
-			buyer: T::AccountId,
-			seller: T::AccountId,
+			payer: T::AccountId,
+			payee: T::AccountId,
 			resolver:Option<Resolver<T>>
 		) -> Self{
 			AccountSigners{
-				buyer,
-				seller,
+				payer,
+				payee,
 				resolver,
 			}
 		}
-		pub(super) fn get_buyer(&self) -> &T::AccountId{
-			&self.buyer
+		pub(super) fn get_payer(&self) -> &T::AccountId{
+			&self.payer
 		}
 
-		pub(super) fn get_seller(&self) -> &T::AccountId{
-			&self.seller
+		pub(super) fn get_payee(&self) -> &T::AccountId{
+			&self.payee
 		}
 
 		pub(super) fn get_resolver(&self) -> &Option<Resolver<T>>{ &self.resolver }
@@ -101,7 +101,8 @@ pub mod utils{
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum Confirm{
 		Buyer,
-		Seller
+		Seller,
+		payee
 	}
 
 
@@ -109,7 +110,7 @@ pub mod utils{
 
 		// Inner functionality for the opening of multisig account
 		pub(crate) fn inner_operate(buyer: T::AccountId, multi_id: T::AccountId) -> DispatchResult{
-
+			//let Accounts = AccountSigners::new(buyer,mu)
 			Ok(())
 		}
 
@@ -126,9 +127,9 @@ pub mod utils{
 				let (acc1, acc2, opt_acc3) =
 					match account_object.get_resolver(){
 					Some(resolver) => {
-						 (account_object.get_buyer(),account_object.get_seller(),account_object.get_legal_account())
+						 (account_object.get_payer(),account_object.get_payee(),account_object.get_legal_account())
 					},
-					None => (account_object.get_buyer(),account_object.get_seller(),None)
+					None => (account_object.get_payer(),account_object.get_payee(),None)
 				};
 
 			let entropy = (b"vane/salt",acc1,acc2,opt_acc3.unwrap()).using_encoded(blake2_256);
