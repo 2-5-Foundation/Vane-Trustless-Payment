@@ -39,7 +39,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::{BoundedSlice, traits::{StaticLookup}};
-	use super::helper::{AccountSigners, Order};
+	use super::helper::{AccountSigners, Order, RevertReasons};
 
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 
@@ -90,6 +90,13 @@ pub mod pallet {
 			let buyer = ensure_signed(origin)?;
 			Ok(())
 
+		}
+
+		// If the payer accidently makes a mistake due to RevertReasons the funds can be refunded back
+		// Punishment will occur if the reason is personal.
+		#[pallet::weight(10)]
+		pub fn revert_fund(origin:OriginFor<T>, reason:RevertReasons) -> DispatchResult{
+			Ok(())
 		}
 	}
 
