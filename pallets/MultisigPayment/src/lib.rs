@@ -39,7 +39,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::{BoundedSlice, traits::{StaticLookup}};
-	use super::helper::{AccountSigners, Order, RevertReasons};
+	use super::helper::{AccountSigners, Order, RevertReasons, Confirm};
 
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 
@@ -97,6 +97,16 @@ pub mod pallet {
 		#[pallet::weight(10)]
 		pub fn revert_fund(origin:OriginFor<T>, reason:RevertReasons) -> DispatchResult{
 			Ok(())
+		}
+
+		// Get the confirm accout address and store them in Signers Storage Item. Sort and make sure
+		// buyer's address is first
+		#[pallet::weight(10)]
+		pub fn confirm(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
+			todo!( Always make sure if its the buyer, he should be first in the vector.
+				1. Store the account_id in the Signer Storage Item.
+				2. Theb next steps will follow after this.
+			)
 		}
 	}
 
