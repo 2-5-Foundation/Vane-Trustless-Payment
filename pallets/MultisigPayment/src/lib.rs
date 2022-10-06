@@ -101,12 +101,13 @@ pub mod pallet {
 
 		// Get the confirm accout address and store them in Signers Storage Item. Sort and make sure
 		// buyer's address is first
+		// Always make sure if its the buyer, he should be first in the vector,
+		// 		1. Store the account_id in the Signer Storage Item,
+		// 		2. Then next steps will follow after this,
+
 		#[pallet::weight(10)]
 		pub fn confirm(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
-			todo!( Always make sure if its the buyer, he should be first in the vector.
-				1. Store the account_id in the Signer Storage Item.
-				2. Theb next steps will follow after this.
-			)
+			Ok(())
 		}
 	}
 
