@@ -84,7 +84,8 @@ pub mod pallet {
 			timestamp: T::BlockNumber,
 
 		},
-		AccountAddressStored(T::AccountId),
+		PayeeAddressconfirmed(T::AccountId),
+		PayersAddressConfirmed(T::AccountId),
 	}
 	#[pallet::error]
 	pub enum Error<T>{
@@ -135,15 +136,29 @@ pub mod pallet {
 
 		#[pallet::weight(10)]
 		pub fn confirm(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
-			let who = ensure_signed(origin)?;
+			let user_account = ensure_signed(origin)?;
+			let bounded_keys;
+			match who {
+				Confirm::payee => {
+					bounded_keys =	Vec::<AccountFor<T>>::try_from((user_account).clone());
+					Signers::<T>::put(bounded_keys);
+					Self::deposit_event(Event::PayeeAddressconfirmed(bounded_keys));
+					
+				}
+				Confirm::payer => {
+					 bounded_keys = Vec::<AccountFor<T>>::try_from((user_account).clone());
+					 Signers::<T>::put(bounded_keys);
+					 Self::deposit_event(Event::PayersAddressConfirmed(bounded_keys));
+				}
+			}
 
-			let bounded_keys = Vec::<AccountFor<T>>::try_from((who).clone());
+			//let bounded_keys = Vec::<AccountFor<T>>::try_from((who).clone());
 			
 			// Storing confirmed account address
-			Signers::<T>::put(bounded_keys);
+			
 
 			// Emitting storage event.
-			Self::deposit_event(Event::AccountAddressStored(who));
+			
 			// Return a successful DispatchResultWithPostInfo
 			
 			Ok(())
