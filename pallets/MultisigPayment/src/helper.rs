@@ -26,8 +26,8 @@ pub mod utils{
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct AccountSigners<T: Config>{
-		buyer: T::AccountId,
-		seller: T::AccountId,
+		payer: T::AccountId,
+		payee: T::AccountId,
 		resolver: Option<Resolver<T>>,
 	}
 
@@ -46,24 +46,32 @@ pub mod utils{
 		Both(T::AccountId)
 	}
 
+	// This should be used as a parameter for choosing which Resolving method should take place
+	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	pub enum ResolverChoice{
+		LegalTeam,
+		Governance,
+	}
+
+
 	impl<T> AccountSigners<T> where T:Config{
 		pub(super) fn new(
-			buyer: T::AccountId,
-			seller: T::AccountId,
+			payer: T::AccountId,
+			payee: T::AccountId,
 			resolver:Option<Resolver<T>>
 		) -> Self{
 			AccountSigners{
-				buyer,
-				seller,
+				payer,
+				payee,
 				resolver,
 			}
 		}
-		pub(super) fn get_buyer(&self) -> &T::AccountId{
-			&self.buyer
+		pub(super) fn get_payer(&self) -> &T::AccountId{
+			&self.payer
 		}
 
-		pub(super) fn get_seller(&self) -> &T::AccountId{
-			&self.seller
+		pub(super) fn get_payee(&self) -> &T::AccountId{
+			&self.payee
 		}
 
 		pub(super) fn get_resolver(&self) -> &Option<Resolver<T>>{ &self.resolver }
@@ -79,44 +87,52 @@ pub mod utils{
 	}
 
 
-	// A struct that should be used as a reference when a payee account is not provided.
-	// Mostly to be used in a trade payment.
-	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-	#[scale_info(skip_type_params(T))]
-	pub struct Order<T: Config>{
-		order_number:u32,
-		account: T::AccountId
-	}
-
 	// Revert Fund reasons enum
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum RevertReasons{
-		// The fee will be refunded
+		// The fee will be refunded, the payer must show a proof of wrong address.
 		WrongPayeeAddress,
-		// We should introduce sort of punishment
-		ChangeOfDecision
+		// We should introduce sort of punishment, This reason should be taken seriously and
+		// at the moment it should be only used in non trade operation.
+		ChangeOfDecision,
+		// Seller's fault, this is when a resolver intervene
+		PayeeMisbehaviour
+	}
+
+	// Seller's reason to make fund go through when a buyer misbehave
+	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	pub enum PayeeReason {
+		PayerMisbehaviour
 	}
 
 	// Confirmation enum which will be used to confirm the account_ids before dispatching multi-sig Call
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum Confirm{
 		Buyer,
-		Seller
+		Seller,
+		payee
 	}
+
 
 
 	impl<T:Config> Pallet<T>{
 
 		// Inner functionality for the opening of multisig account
-		pub(crate) fn inner_operate(buyer: T::AccountId, multi_id: T::AccountId) -> DispatchResult{
+		pub(crate) fn inner_vane_pay_wo_resolver(
+			payer: T::AccountId,
+			payee: T::AccountId,
+
+		) -> DispatchResult{
+
+			let Accounts = AccountSigners::<T>::new(payer,payee,None);
+			let multi_id = Self::derive_multi_id(Accounts);
 
 			Ok(())
 		}
 
 
 		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult{
-
-
+			
 			Ok(())
 		}
 
@@ -126,9 +142,9 @@ pub mod utils{
 				let (acc1, acc2, opt_acc3) =
 					match account_object.get_resolver(){
 					Some(resolver) => {
-						 (account_object.get_buyer(),account_object.get_seller(),account_object.get_legal_account())
+						 (account_object.get_payer(),account_object.get_payee(),account_object.get_legal_account())
 					},
-					None => (account_object.get_buyer(),account_object.get_seller(),None)
+					None => (account_object.get_payer(),account_object.get_payee(),None)
 				};
 
 			let entropy = (b"vane/salt",acc1,acc2,opt_acc3.unwrap()).using_encoded(blake2_256);

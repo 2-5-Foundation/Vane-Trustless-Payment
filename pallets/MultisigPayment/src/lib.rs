@@ -18,6 +18,9 @@
 //
 // The inner Call is balance's call transfer function.
 
+//------------------------------------------------------------------------------------------//
+// We must keep track of seller and buyer bad behaviours in storage item so that we can introduce
+// further punishments when bad repeated behaviour occurs
 
 pub use pallet::*;
 
@@ -32,25 +35,36 @@ mod helper;
 //#[cfg(feature = "runtime-benchmarks")]
 //mod benchmarking;
 
-// A multi-signature pallet implemented for `Vane Payment System`
+// A multi-signature implementation for `Vane Payment System`
 
 #[frame_support::pallet]
 pub mod pallet {
+	use frame_support::pallet;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::{BoundedSlice, traits::{StaticLookup}};
-	use super::helper::{AccountSigners, Order, RevertReasons, Confirm};
+	use sp_runtime::{traits::{StaticLookup}};
+	use crate::pallet;
+	use super::helper::{
+		AccountSigners,
+		RevertReasons,
+		Confirm,
+		ResolverChoice,
+	};
 
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 
 	#[pallet::pallet]
-	pub struct Pallet<T>(_);
+	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_resolver)]
+	pub(super) type ResolverSigner<T: Config> = StorageValue<_,T::AccountId>;
 
 	#[pallet::storage]
 	#[pallet::unbounded]
@@ -72,6 +86,10 @@ pub mod pallet {
 		},
 		AccountAddressStored(T::AccountId),
 	}
+	#[pallet::error]
+	pub enum Error<T>{
+		UnexpectedError
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -83,18 +101,27 @@ pub mod pallet {
 		#[pallet::weight(10)]
 		pub fn vane_pay(
 			origin: OriginFor<T>,
-			//reference: Option<Order<T>>,
 			payee: Option<AccountFor<T>>,
-
+			resolver: ResolverChoice
+			// Third parameter will be a type that implements Order trait from primitive
 		) -> DispatchResult {
 
-			let buyer = ensure_signed(origin)?;
-			Ok(())
+			let payer = ensure_signed(origin)?;
+			let payee = payee.ok_or(Error::<T>::UnexpectedError)?;
+			let payee = <<T as frame_system::Config>::Lookup as StaticLookup>
+														::lookup(payee)?;
 
+			match resolver {
+				LegalTeam => Self::inner_vane_pay_wo_resolver(payer,payee)?,
+				Governance=> ()
+			}
+			Ok(())
 		}
 
 		// If the payer accidently makes a mistake due to RevertReasons the funds can be refunded back
 		// Punishment will occur if the reason is personal.
+
+		// We should introduce some sort of limit for WrongAddress reason occurence.
 		#[pallet::weight(10)]
 		pub fn revert_fund(origin:OriginFor<T>, reason:RevertReasons) -> DispatchResult{
 			Ok(())
