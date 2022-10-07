@@ -24,11 +24,11 @@
 
 pub use pallet::*;
 
-//#[cfg(test)]
-//mod mock;
+#[cfg(test)]
+mod mock;
 
-//#[cfg(test)]
-//mod tests;
+#[cfg(test)]
+mod tests;
 mod helper;
 
 
@@ -43,6 +43,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::{traits::{StaticLookup}};
+	use sp_std::vec::Vec;
 	use crate::pallet;
 	use super::helper::{
 		AccountSigners,
