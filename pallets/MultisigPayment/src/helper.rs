@@ -117,7 +117,7 @@ pub mod utils{
 
 	impl<T:Config> Pallet<T>{
 
-		// Inner functionality for the opening of multisig account
+		// Inner functionality for the opening of multi-sig account
 		pub(crate) fn inner_vane_pay_wo_resolver(
 			payer: T::AccountId,
 			payee: T::AccountId,
@@ -132,7 +132,16 @@ pub mod utils{
 
 
 		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult{
-			let AccountInfo = todo!();
+			let AccountInfo = AccountInfo::<T::Index, T::AccountData>{
+				consumers:1,
+				..Default::default()
+			};
+
+			// Ensure the multi_id account is not yet registered in the storage
+			ensure!(!<frame_system::Pallet<T>>::account_exists(&multi_id),Error::<T>::MultiAccountExists);
+
+			// Register to frame_system Account Storage item;
+			<frame_system::Account<T>>::set(multi_id,AccountInfo);
 			Ok(())
 		}
 
