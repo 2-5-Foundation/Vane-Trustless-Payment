@@ -145,7 +145,7 @@ pub mod pallet {
 			let bounded_keys;
 			match who {
 				Confirm::Buyer => {
-					bounded_keys =	BoundedVec::<AccountId<T>>::try_from((user_account, MaxSigners));
+					bounded_keys =	BoundedVec::<AccountId<T>, MaxSigners>::try_from((user_account, MaxSigners));
 					// Storing confirmed account address
 					ConfirmedSigners::<T>::put(bounded_keys);
 					// Emitting storage event.
@@ -153,7 +153,7 @@ pub mod pallet {
 					
 				}
 				Confirm::Seller => {
-					 bounded_keys = BoundedVec::<AccountId<T>>::try_from((user_account, MaxSigners));
+					 bounded_keys = BoundedVec::<AccountId<T>, MaxSigners>::try_from((user_account, MaxSigners));
 					 // Storing confirmed account address
 					 ConfirmedSigners::<T>::put(bounded_keys);
 					 // Emitting storage event.
