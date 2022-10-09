@@ -24,11 +24,11 @@
 
 pub use pallet::*;
 
-//#[cfg(test)]
-//mod mock;
+#[cfg(test)]
+mod mock;
 
-//#[cfg(test)]
-//mod tests;
+#[cfg(test)]
+mod tests;
 mod helper;
 
 
@@ -42,7 +42,8 @@ pub mod pallet {
 	use frame_support::pallet;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::{traits::{StaticLookup}};
+	use sp_runtime::{parameter_types, traits::{StaticLookup}};
+	use sp_std::vec::Vec;
 	use crate::pallet;
 	use super::helper::{
 		AccountSigners,
@@ -52,6 +53,10 @@ pub mod pallet {
 	};
 
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
+
+	parameter_types! {
+		pub const MaxSigners: u16 = 2;
+	}
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
@@ -72,9 +77,8 @@ pub mod pallet {
 	pub(super) type AllowedSigners<T: Config> = StorageValue<_,AccountSigners<T>>;
 
 	#[pallet::storage]
-	#[pallet::unbounded]
 	#[pallet::getter(fn get_signers)]
-	pub(super) type Signers<T: Config> = StorageValue<_,Vec<T::AccountId>,ValueQuery>;
+	pub(super) type ConfirmedSigners<T: Config> = StorageValue<_,BoundedVec<T::AccountId, MaxSigners>,ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -89,7 +93,8 @@ pub mod pallet {
 	}
 	#[pallet::error]
 	pub enum Error<T>{
-		UnexpectedError
+		UnexpectedError,
+		MultiAccountExists
 	}
 
 	#[pallet::call]
@@ -122,7 +127,7 @@ pub mod pallet {
 		// If the payer accidently makes a mistake due to RevertReasons the funds can be refunded back
 		// Punishment will occur if the reason is personal.
 
-		// We should introduce some sort of limit for WrongAddress reason occurence.
+		// We should introduce some sort of limit for WrongAddress reason occurrence.
 		#[pallet::weight(10)]
 		pub fn revert_fund(origin:OriginFor<T>, reason:RevertReasons) -> DispatchResult{
 			Ok(())
@@ -135,7 +140,7 @@ pub mod pallet {
 		// 		2. Then next steps will follow after this,
 
 		#[pallet::weight(10)]
-		pub fn confirm(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
+		pub fn confirm_payee(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
 			let user_account = ensure_signed(origin)?;
 			let bounded_keys;
 			match who {
