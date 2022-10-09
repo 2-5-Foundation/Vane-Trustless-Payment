@@ -144,7 +144,7 @@ pub mod pallet {
 			let user_account = ensure_signed(origin)?;
 			let bounded_keys;
 			match who {
-				Confirm::Buyer => {
+				Confirm::payer => {
 					bounded_keys =	BoundedVec::<T::AccountId, MaxSigners>::try_from((user_account, MaxSigners));
 					// Storing confirmed account address
 					ConfirmedSigners::<T>::put(bounded_keys);
@@ -152,7 +152,7 @@ pub mod pallet {
 					Self::deposit_event(Event::PayeeAddressconfirmed(user_account, 2));
 					
 				}
-				Confirm::Seller => {
+				Confirm::payee => {
 					 bounded_keys = BoundedVec::<T::AccountId, MaxSigners>::try_from((user_account, MaxSigners));
 					 // Storing confirmed account address
 					 ConfirmedSigners::<T>::put(bounded_keys);
