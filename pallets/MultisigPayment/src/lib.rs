@@ -139,16 +139,16 @@ pub mod pallet {
 			let user_account = ensure_signed(origin)?;
 			let bounded_keys;
 			match who {
-				Confirm::payee => {
-					bounded_keys =	Vec::<AccountFor<T>>::try_from((user_account).clone());
+				Confirm::Buyer => {
+					bounded_keys =	Vec::<AccountId<T>>::try_from((user_account).clone());
 					Signers::<T>::put(bounded_keys);
-					Self::deposit_event(Event::PayeeAddressconfirmed(bounded_keys));
+					Self::deposit_event(Event::PayeeAddressconfirmed(user_account));
 					
 				}
-				Confirm::payer => {
-					 bounded_keys = Vec::<AccountFor<T>>::try_from((user_account).clone());
+				Confirm::Seller => {
+					 bounded_keys = Vec::<AccountId<T>>::try_from((user_account).clone());
 					 Signers::<T>::put(bounded_keys);
-					 Self::deposit_event(Event::PayersAddressConfirmed(bounded_keys));
+					 Self::deposit_event(Event::PayersAddressConfirmed(user_account));
 				}
 			}
 
