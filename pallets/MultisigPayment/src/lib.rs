@@ -88,8 +88,8 @@ pub mod pallet {
 			timestamp: T::BlockNumber,
 
 		},
-		PayeeAddressconfirmed(T::AccountIdm u32),
-		PayersAddressConfirmed(T::AccountId, u32),
+		PayeeAddressconfirmed(T::AccountId, u16),
+		PayersAddressConfirmed(T::AccountId, u16),
 	}
 	#[pallet::error]
 	pub enum Error<T>{
@@ -145,24 +145,21 @@ pub mod pallet {
 			let bounded_keys;
 			match who {
 				Confirm::Buyer => {
-					bounded_keys =	BoundedVec::<AccountId<T>>::try_from((user_account).clone());
+					bounded_keys =	BoundedVec::<AccountId<T>>::try_from((user_account, MaxSigners));
+					// Storing confirmed account address
 					ConfirmedSigners::<T>::put(bounded_keys);
-					Self::deposit_event(Event::PayeeAddressconfirmed(user_account));
+					// Emitting storage event.
+					Self::deposit_event(Event::PayeeAddressconfirmed(user_account, 2));
 					
 				}
 				Confirm::Seller => {
-					 bounded_keys = BoundedVec::<AccountId<T>>::try_from((user_account).clone());
+					 bounded_keys = BoundedVec::<AccountId<T>>::try_from((user_account, MaxSigners));
+					 // Storing confirmed account address
 					 ConfirmedSigners::<T>::put(bounded_keys);
-					 Self::deposit_event(Event::PayersAddressConfirmed(user_account));
+					 // Emitting storage event.
+					 Self::deposit_event(Event::PayersAddressConfirmed(user_account, 2));
 				}
 			}
-
-			//let bounded_keys = Vec::<AccountFor<T>>::try_from((who).clone());
-			
-			// Storing confirmed account address
-			
-
-			// Emitting storage event.
 			
 			// Return a successful DispatchResultWithPostInfo
 			
