@@ -88,8 +88,8 @@ pub mod pallet {
 			timestamp: T::BlockNumber,
 
 		},
-		PayeeAddressconfirmed(T::AccountId),
-		PayersAddressConfirmed(T::AccountId),
+		PayeeAddressconfirmed(T::AccountIdm u32),
+		PayersAddressConfirmed(T::AccountId, u32),
 	}
 	#[pallet::error]
 	pub enum Error<T>{
@@ -145,14 +145,14 @@ pub mod pallet {
 			let bounded_keys;
 			match who {
 				Confirm::Buyer => {
-					bounded_keys =	Vec::<AccountId<T>>::try_from((user_account).clone());
-					Signers::<T>::put(bounded_keys);
+					bounded_keys =	BoundedVec::<AccountId<T>>::try_from((user_account).clone());
+					ConfirmedSigners::<T>::put(bounded_keys);
 					Self::deposit_event(Event::PayeeAddressconfirmed(user_account));
 					
 				}
 				Confirm::Seller => {
-					 bounded_keys = Vec::<AccountId<T>>::try_from((user_account).clone());
-					 Signers::<T>::put(bounded_keys);
+					 bounded_keys = BoundedVec::<AccountId<T>>::try_from((user_account).clone());
+					 ConfirmedSigners::<T>::put(bounded_keys);
 					 Self::deposit_event(Event::PayersAddressConfirmed(user_account));
 				}
 			}
