@@ -86,7 +86,6 @@ pub mod pallet {
 		CallExecuted{
 			multi_id: T::AccountId,
 			timestamp: T::BlockNumber,
-
 		}
 	}
 	#[pallet::error]
@@ -116,8 +115,8 @@ pub mod pallet {
 														::lookup(payee)?;
 
 			match resolver {
-				LegalTeam => Self::inner_vane_pay_wo_resolver(payer,payee)?,
-				Governance=> ()
+				ResolverChoice::LegalTeam => Self::inner_vane_pay_wo_resolver(payer,payee)?,
+				ResolverChoice::Governance=> ()
 			}
 			Ok(())
 		}

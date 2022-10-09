@@ -22,6 +22,9 @@ pub mod utils{
 	use sp_runtime::traits::StaticLookup;
 	use super::*;
 	use frame_system::AccountInfo;
+
+
+
 	// A struct by which it should be used as a source of signatures.
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
@@ -45,6 +48,7 @@ pub mod utils{
 		//some future time feature
 		Both(T::AccountId)
 	}
+
 
 	// This should be used as a parameter for choosing which Resolving method should take place
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -124,15 +128,16 @@ pub mod utils{
 
 		) -> DispatchResult{
 
-			let Accounts = AccountSigners::<T>::new(payer,payee,None);
-			let multi_id = Self::derive_multi_id(Accounts);
+			let accounts = AccountSigners::<T>::new(payer,payee,None);
+			let multi_id = Self::derive_multi_id(accounts);
+			Self::create_multi_account(multi_id)?;
 
 			Ok(())
 		}
 
 
 		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult{
-			let AccountInfo = AccountInfo::<T::Index, T::AccountData>{
+			let account_info = AccountInfo::<T::Index, T::AccountData>{
 				consumers:1,
 				..Default::default()
 			};
@@ -141,9 +146,10 @@ pub mod utils{
 			ensure!(!<frame_system::Pallet<T>>::account_exists(&multi_id),Error::<T>::MultiAccountExists);
 
 			// Register to frame_system Account Storage item;
-			<frame_system::Account<T>>::set(multi_id,AccountInfo);
+			<frame_system::Account<T>>::set(multi_id,account_info);
 			Ok(())
 		}
+
 
 		// Now , we are only focusing legal team Resolver variant in multi_id generation
 		pub(crate) fn derive_multi_id(account_object: AccountSigners<T>) -> T::AccountId{
