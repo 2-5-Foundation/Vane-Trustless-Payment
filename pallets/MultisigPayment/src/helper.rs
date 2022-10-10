@@ -108,9 +108,8 @@ pub mod utils{
 	// Confirmation enum which will be used to confirm the account_ids before dispatching multi-sig Call
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum Confirm{
-		Buyer,
-		Seller,
-		payee
+		Payer,
+		Payee,
 	}
 
 

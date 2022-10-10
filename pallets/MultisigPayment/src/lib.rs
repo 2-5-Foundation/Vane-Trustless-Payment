@@ -88,13 +88,21 @@ pub mod pallet {
 			timestamp: T::BlockNumber,
 
 		},
-		PayeeAddressconfirmed(T::AccountId, u16),
-		PayersAddressConfirmed(T::AccountId, u16),
+		PayeeAddressconfirmed{
+			accountId:T::AccountId, 
+			timestamp: T::BlockNumber,
+		},
+		PayersAddressConfirmed{
+			accountId: T::AccountId,
+			timestamp: T::BlockNumber,
+		}
+			
 	}
 	#[pallet::error]
 	pub enum Error<T>{
 		UnexpectedError,
-		MultiAccountExists
+		MultiAccountExists,
+		ExceededSigners,
 	}
 
 	#[pallet::call]
@@ -141,28 +149,36 @@ pub mod pallet {
 
 		#[pallet::weight(10)]
 		pub fn confirm_payee(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
+			
 			let user_account = ensure_signed(origin)?;
-			let bounded_keys;
-			match who {
-				Confirm::payee => {
-					bounded_keys =	BoundedVec::<T::AccountId, MaxSigners>::try_from((user_account, MaxSigners));
-					// Storing confirmed account address
-					ConfirmedSigners::<T>::put(bounded_keys);
-					// Emitting storage event.
-					Self::deposit_event(Event::PayeeAddressconfirmed(user_account, 2));
+			
+				match who {
+					Confirm::Payee => {
 					
-				}
-				Confirm::payer => {
-					 bounded_keys = BoundedVec::<T::AccountId, MaxSigners>::try_from((user_account, MaxSigners));
-					 // Storing confirmed account address
-					 ConfirmedSigners::<T>::put(bounded_keys);
-					 // Emitting storage event.
-					 Self::deposit_event(Event::PayersAddressConfirmed(user_account, 2));
-				}
-			}
-			
-			// Return a successful DispatchResultWithPostInfo
-			
+						<ConfirmedSigners<T>>::try_mutate(|account_vec| { 
+							
+							account_vec.try_insert(0,user_account.clone())
+
+						}).map_err(|_| Error::<T>::ExceededSigners)?;
+						
+						let timestamp = <frame_system::Pallet<T>>::block_number();
+						Self::deposit_event(Event::PayeeAddressconfirmed {accountId:user_account, timestamp});
+
+					},
+					Confirm::Payer => {
+						<ConfirmedSigners<T>>::try_mutate(|account_vec| { 
+							
+							account_vec.try_insert(1,user_account.clone())
+
+						}).map_err(|_| Error::<T>::ExceededSigners)?;
+
+						let timestamp = <frame_system::Pallet<T>>::block_number();
+						Self::deposit_event(Event::PayersAddressConfirmed{accountId:user_account, timestamp});
+
+					},
+				}; 
+				
+				
 			Ok(())
 		}
 	}
