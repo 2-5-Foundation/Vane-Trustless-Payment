@@ -26,7 +26,6 @@ impl system::Config for Test {
 	type BaseCallFilter = frame_support::traits::Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
-	type DbWeight = ();
 	type Origin = Origin;
 	type Call = Call;
 	type Index = u64;
@@ -38,6 +37,7 @@ impl system::Config for Test {
 	type Header = Header;
 	type Event = Event;
 	type BlockHashCount = ConstU64<250>;
+	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
 	type AccountData = ();
@@ -48,6 +48,8 @@ impl system::Config for Test {
 	type OnSetCode = ();
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
+
+
 
 impl pallet_multisig_payment::Config for Test {
 	type Event = Event;

@@ -43,8 +43,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::{parameter_types, traits::{StaticLookup}};
-	use sp_std::vec::Vec;
-	use crate::pallet;
+	use primitive::OrderTrait;
 	use super::helper::{
 		AccountSigners,
 		RevertReasons,
@@ -64,7 +63,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
+		//type Order: OrderTrait + TypeInfo + Decode + Encode + Clone + PartialEq + Debug;
 	}
 
 	#[pallet::storage]
@@ -91,15 +90,15 @@ pub mod pallet {
 			timestamp: T::BlockNumber,
 
 		},
-		PayeeAddressconfirmed{
-			accountId:T::AccountId, 
+		PayeeAddressConfirmed{
+			account_id:T::AccountId,
 			timestamp: T::BlockNumber,
 		},
 		PayersAddressConfirmed{
-			accountId: T::AccountId,
+			account_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		}
-			
+
 	}
 	#[pallet::error]
 	pub enum Error<T>{
@@ -120,8 +119,9 @@ pub mod pallet {
 		pub fn vane_pay(
 			origin: OriginFor<T>,
 			payee: Option<AccountFor<T>>,
-			resolver: ResolverChoice
+			resolver: ResolverChoice,
 			// Third parameter will be a type that implements Order trait from primitive
+			//order: Option<T::Order>
 		) -> DispatchResult {
 
 			let payer = ensure_signed(origin)?;
@@ -152,42 +152,49 @@ pub mod pallet {
 		// 		2. Then next steps will follow after this,
 
 		#[pallet::weight(10)]
-		pub fn confirm_payee(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
-			
-			let user_account = ensure_signed(origin)?;
-			
-			ensure!(
-				ConfirmedSigners::<user_account>::exist(), 
-				Error::<T>::AccountAlreadyExist,
-			);
+		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
 
+			let user_account = ensure_signed(origin)?;
+
+			// Check if account already exists
+
+			// Check the account from Payer and Payee are the one registered in AllowedSigners storage
+			// This is crucial and this check should occur before the match statement
 				match who {
 					Confirm::Payee => {
-					
-						<ConfirmedSigners<T>>::try_mutate(|account_vec| { 
-							
+
+						<ConfirmedSigners<T>>::try_mutate(|account_vec| {
+
 							account_vec.try_insert(0,user_account.clone())
 
 						}).map_err(|_| Error::<T>::ExceededSigners)?;
-						
+
 						let timestamp = <frame_system::Pallet<T>>::block_number();
-						Self::deposit_event(Event::PayeeAddressconfirmed {accountId:user_account, timestamp});
+						Self::deposit_event(Event::PayeeAddressConfirmed {account_id:user_account, timestamp});
 
 					},
 					Confirm::Payer => {
-						<ConfirmedSigners<T>>::try_mutate(|account_vec| { 
-							
+						<ConfirmedSigners<T>>::try_mutate(|account_vec| {
+
 							account_vec.try_insert(1,user_account.clone())
 
 						}).map_err(|_| Error::<T>::ExceededSigners)?;
 
 						let timestamp = <frame_system::Pallet<T>>::block_number();
-						Self::deposit_event(Event::PayersAddressConfirmed{accountId:user_account, timestamp});
+						Self::deposit_event(Event::PayersAddressConfirmed{account_id:user_account, timestamp});
 
 					},
-				}; 
-				
-				
+				};
+
+			// We will discuss first my head is spinning,I want to get the logic right
+			// Next steps are
+			//     1. After registering the specific account to the storage,
+			//        construct the AccountSigners object using those accounts
+			//     2. Derive the multi_id Account from those accounts using the Account Signers
+			//       object constructed
+			//     3. Hash the multi_id account
+			//     4. Repeat the same process for
+
 			Ok(())
 		}
 	}
