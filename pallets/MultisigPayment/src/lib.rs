@@ -71,10 +71,13 @@ pub mod pallet {
 	#[pallet::getter(fn get_resolver)]
 	pub(super) type ResolverSigner<T: Config> = StorageValue<_,T::AccountId>;
 
+
+	// Introduced StorageMap because this storage should contain more  than one instance of AccountSigners
+
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn get_allowed_signers)]
-	pub(super) type AllowedSigners<T: Config> = StorageValue<_,AccountSigners<T>>;
+	pub(super) type AllowedSigners<T: Config> = StorageMap<_,Blake2_256,T::AccountId,AccountSigners<T>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_signers)]
@@ -137,7 +140,7 @@ pub mod pallet {
 		// 		2. Then next steps will follow after this,
 
 		#[pallet::weight(10)]
-		pub fn confirm_payee(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
+		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
 			Ok(())
 		}
 	}

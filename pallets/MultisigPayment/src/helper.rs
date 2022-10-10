@@ -59,7 +59,7 @@ pub mod utils{
 
 
 	impl<T> AccountSigners<T> where T:Config{
-		pub(super) fn new(
+		pub fn new(
 			payer: T::AccountId,
 			payee: T::AccountId,
 			resolver:Option<Resolver<T>>
@@ -112,9 +112,8 @@ pub mod utils{
 	// Confirmation enum which will be used to confirm the account_ids before dispatching multi-sig Call
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum Confirm{
-		Buyer,
-		Seller,
-		payee
+		Payer,
+		Payee
 	}
 
 
@@ -129,7 +128,8 @@ pub mod utils{
 		) -> DispatchResult{
 
 			let accounts = AccountSigners::<T>::new(payer,payee,None);
-			let multi_id = Self::derive_multi_id(accounts);
+			let multi_id = Self::derive_multi_id(accounts.clone());
+			AllowedSigners::<T>::insert(&multi_id,accounts);
 			Self::create_multi_account(multi_id)?;
 
 			Ok(())
@@ -152,6 +152,7 @@ pub mod utils{
 
 
 		// Now , we are only focusing legal team Resolver variant in multi_id generation
+		// We can do better on this function definition
 		pub(crate) fn derive_multi_id(account_object: AccountSigners<T>) -> T::AccountId{
 
 				let (acc1, acc2, opt_acc3) =
@@ -162,9 +163,18 @@ pub mod utils{
 					None => (account_object.get_payer(),account_object.get_payee(),None)
 				};
 
-			let entropy = (b"vane/salt",acc1,acc2,opt_acc3.unwrap()).using_encoded(blake2_256);
-			Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-				.expect("infinite length input; no invalid inputs for type; qed")
+			let multi_account = if let Some(acc3) = opt_acc3{
+				let entropy = (b"vane/salt",acc1,acc2,acc3).using_encoded(blake2_256);
+				 Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+					.expect("infinite length input; no invalid inputs for type; qed")
+			}else{
+				let entropy = (b"vane/salt",acc1,acc2).using_encoded(blake2_256);
+				Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+					.expect("infinite length input; no invalid inputs for type; qed")
+			};
+
+			multi_account
+
 		}
 	}
 
