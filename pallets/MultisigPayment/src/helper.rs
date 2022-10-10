@@ -120,6 +120,11 @@ pub mod utils{
 
 	impl<T:Config> Pallet<T>{
 
+		// Call if there are all confirmed signers
+
+
+		// Call if there is only 1 confirmed signer
+
 		// Inner functionality for the opening of multi-sig account
 		pub(crate) fn inner_vane_pay_wo_resolver(
 			payer: T::AccountId,
