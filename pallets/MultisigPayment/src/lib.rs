@@ -103,6 +103,7 @@ pub mod pallet {
 		UnexpectedError,
 		MultiAccountExists,
 		ExceededSigners,
+		AccountAlreadyExist,
 	}
 
 	#[pallet::call]
@@ -152,6 +153,11 @@ pub mod pallet {
 			
 			let user_account = ensure_signed(origin)?;
 			
+			ensure!(
+				ConfirmedSigners::<user_account>::exist(), 
+				Error::<T>::AccountAlreadyExist,
+			);
+
 				match who {
 					Confirm::Payee => {
 					
