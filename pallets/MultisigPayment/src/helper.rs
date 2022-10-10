@@ -22,6 +22,9 @@ pub mod utils{
 	use sp_runtime::traits::StaticLookup;
 	use super::*;
 	use frame_system::AccountInfo;
+
+
+
 	// A struct by which it should be used as a source of signatures.
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
@@ -46,6 +49,7 @@ pub mod utils{
 		Both(T::AccountId)
 	}
 
+
 	// This should be used as a parameter for choosing which Resolving method should take place
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum ResolverChoice{
@@ -55,7 +59,7 @@ pub mod utils{
 
 
 	impl<T> AccountSigners<T> where T:Config{
-		pub(super) fn new(
+		pub fn new(
 			payer: T::AccountId,
 			payee: T::AccountId,
 			resolver:Option<Resolver<T>>
@@ -109,7 +113,7 @@ pub mod utils{
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum Confirm{
 		Payer,
-		Payee,
+		Payee
 	}
 
 
@@ -123,15 +127,17 @@ pub mod utils{
 
 		) -> DispatchResult{
 
-			let Accounts = AccountSigners::<T>::new(payer,payee,None);
-			let multi_id = Self::derive_multi_id(Accounts);
+			let accounts = AccountSigners::<T>::new(payer,payee,None);
+			let multi_id = Self::derive_multi_id(accounts.clone());
+			AllowedSigners::<T>::insert(&multi_id,accounts);
+			Self::create_multi_account(multi_id)?;
 
 			Ok(())
 		}
 
 
 		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult{
-			let AccountInfo = AccountInfo::<T::Index, T::AccountData>{
+			let account_info = AccountInfo::<T::Index, T::AccountData>{
 				consumers:1,
 				..Default::default()
 			};
@@ -140,11 +146,13 @@ pub mod utils{
 			ensure!(!<frame_system::Pallet<T>>::account_exists(&multi_id),Error::<T>::MultiAccountExists);
 
 			// Register to frame_system Account Storage item;
-			<frame_system::Account<T>>::set(multi_id,AccountInfo);
+			<frame_system::Account<T>>::set(multi_id,account_info);
 			Ok(())
 		}
 
+
 		// Now , we are only focusing legal team Resolver variant in multi_id generation
+		// We can do better on this function definition
 		pub(crate) fn derive_multi_id(account_object: AccountSigners<T>) -> T::AccountId{
 
 				let (acc1, acc2, opt_acc3) =
@@ -155,9 +163,18 @@ pub mod utils{
 					None => (account_object.get_payer(),account_object.get_payee(),None)
 				};
 
-			let entropy = (b"vane/salt",acc1,acc2,opt_acc3.unwrap()).using_encoded(blake2_256);
-			Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
-				.expect("infinite length input; no invalid inputs for type; qed")
+			let multi_account = if let Some(acc3) = opt_acc3{
+				let entropy = (b"vane/salt",acc1,acc2,acc3).using_encoded(blake2_256);
+				 Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+					.expect("infinite length input; no invalid inputs for type; qed")
+			}else{
+				let entropy = (b"vane/salt",acc1,acc2).using_encoded(blake2_256);
+				Decode::decode(&mut TrailingZeroInput::new(entropy.as_ref()))
+					.expect("infinite length input; no invalid inputs for type; qed")
+			};
+
+			multi_account
+
 		}
 	}
 

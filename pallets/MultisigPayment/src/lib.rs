@@ -71,10 +71,13 @@ pub mod pallet {
 	#[pallet::getter(fn get_resolver)]
 	pub(super) type ResolverSigner<T: Config> = StorageValue<_,T::AccountId>;
 
+
+	// Introduced StorageMap because this storage should contain more  than one instance of AccountSigners
+
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn get_allowed_signers)]
-	pub(super) type AllowedSigners<T: Config> = StorageValue<_,AccountSigners<T>>;
+	pub(super) type AllowedSigners<T: Config> = StorageMap<_,Blake2_256,T::AccountId,AccountSigners<T>>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_signers)]
@@ -127,8 +130,8 @@ pub mod pallet {
 														::lookup(payee)?;
 
 			match resolver {
-				LegalTeam => Self::inner_vane_pay_wo_resolver(payer,payee)?,
-				Governance=> ()
+				ResolverChoice::LegalTeam => Self::inner_vane_pay_wo_resolver(payer,payee)?,
+				ResolverChoice::Governance=> ()
 			}
 			Ok(())
 		}
