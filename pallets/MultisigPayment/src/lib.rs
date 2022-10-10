@@ -89,12 +89,24 @@ pub mod pallet {
 		CallExecuted{
 			multi_id: T::AccountId,
 			timestamp: T::BlockNumber,
+
+		},
+		PayeeAddressconfirmed{
+			accountId:T::AccountId, 
+			timestamp: T::BlockNumber,
+		},
+		PayersAddressConfirmed{
+			accountId: T::AccountId,
+			timestamp: T::BlockNumber,
 		}
+			
 	}
 	#[pallet::error]
 	pub enum Error<T>{
 		UnexpectedError,
-		MultiAccountExists
+		MultiAccountExists,
+		ExceededSigners,
+		AccountAlreadyExist,
 	}
 
 	#[pallet::call]
@@ -133,14 +145,49 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// Get the confirm accout address and store them in Signers Storage Item. Sort and make sure
+		// Get the confirm account address and store them in Signers Storage Item. Sort and make sure
 		// buyer's address is first
 		// Always make sure if its the buyer, he should be first in the vector,
 		// 		1. Store the account_id in the Signer Storage Item,
 		// 		2. Then next steps will follow after this,
 
 		#[pallet::weight(10)]
-		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
+		pub fn confirm_payee(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
+			
+			let user_account = ensure_signed(origin)?;
+			
+			ensure!(
+				ConfirmedSigners::<user_account>::exist(), 
+				Error::<T>::AccountAlreadyExist,
+			);
+
+				match who {
+					Confirm::Payee => {
+					
+						<ConfirmedSigners<T>>::try_mutate(|account_vec| { 
+							
+							account_vec.try_insert(0,user_account.clone())
+
+						}).map_err(|_| Error::<T>::ExceededSigners)?;
+						
+						let timestamp = <frame_system::Pallet<T>>::block_number();
+						Self::deposit_event(Event::PayeeAddressconfirmed {accountId:user_account, timestamp});
+
+					},
+					Confirm::Payer => {
+						<ConfirmedSigners<T>>::try_mutate(|account_vec| { 
+							
+							account_vec.try_insert(1,user_account.clone())
+
+						}).map_err(|_| Error::<T>::ExceededSigners)?;
+
+						let timestamp = <frame_system::Pallet<T>>::block_number();
+						Self::deposit_event(Event::PayersAddressConfirmed{accountId:user_account, timestamp});
+
+					},
+				}; 
+				
+				
 			Ok(())
 		}
 	}
