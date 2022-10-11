@@ -40,7 +40,10 @@ mod helper;
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet;
-	use frame_support::pallet_prelude::*;
+	use frame_support::{
+		traits::tokens::currency::Currency,
+		pallet_prelude::*
+	};
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::{parameter_types, traits::{StaticLookup}};
 	use primitive::OrderTrait;
@@ -52,7 +55,8 @@ pub mod pallet {
 	};
 
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
-
+	pub(super) type AccountOf<T> =<T as frame_system::Config>::AccountId;
+	pub(super) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountOf<T>>>::Balance;
 	parameter_types! {
 		pub const MaxSigners: u16 = 2;
 	}
@@ -64,6 +68,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		//type Order: OrderTrait + TypeInfo + Decode + Encode + Clone + PartialEq + Debug;
+		type Currency : Currency<Self::AccountId>;
 	}
 
 	#[pallet::storage]
@@ -119,6 +124,7 @@ pub mod pallet {
 		pub fn vane_pay(
 			origin: OriginFor<T>,
 			payee: Option<AccountFor<T>>,
+			amount: BalanceOf<T>,
 			resolver: ResolverChoice,
 			// Third parameter will be a type that implements Order trait from primitive
 			//order: Option<T::Order>
@@ -130,9 +136,10 @@ pub mod pallet {
 														::lookup(payee)?;
 
 			match resolver {
-				ResolverChoice::LegalTeam => Self::inner_vane_pay_wo_resolver(payer,payee)?,
+				ResolverChoice::LegalTeam => Self::inner_vane_pay_wo_resolver(payer,payee, amount)?,
 				ResolverChoice::Governance=> ()
 			}
+
 			Ok(())
 		}
 

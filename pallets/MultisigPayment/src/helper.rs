@@ -15,9 +15,11 @@ use sp_runtime::{
 	traits::{TrailingZeroInput}
 };
 use codec::{Encode, Decode};
+use sp_std::mem::drop;
 
 pub use utils::*;
 pub mod utils{
+	use frame_support::traits::{Currency, ExistenceRequirement};
 	use sp_io::hashing::blake2_256;
 	use sp_runtime::traits::StaticLookup;
 	use super::*;
@@ -129,14 +131,18 @@ pub mod utils{
 		pub(crate) fn inner_vane_pay_wo_resolver(
 			payer: T::AccountId,
 			payee: T::AccountId,
-
+			amount: BalanceOf<T>
 		) -> DispatchResult{
 
-			let accounts = AccountSigners::<T>::new(payer,payee,None);
+			let accounts = AccountSigners::<T>::new(payer.clone(),payee.clone(),None);
 			let multi_id = Self::derive_multi_id(accounts.clone());
 			AllowedSigners::<T>::insert(&multi_id,accounts);
 			Self::create_multi_account(multi_id)?;
 
+			// Transfer balance from Payer to Multi_Id
+			T::Currency::transfer(&payer,&payee,amount, ExistenceRequirement::KeepAlive)?;
+			drop(payer);
+			drop(payee);
 			Ok(())
 		}
 

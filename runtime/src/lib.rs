@@ -269,6 +269,7 @@ impl pallet_sudo::Config for Runtime {
 
 impl pallet_multisig_payment::Config for Runtime {
 	type  Event = Event;
+	type Currency = Balances;
 }
 
 parameter_types! {
