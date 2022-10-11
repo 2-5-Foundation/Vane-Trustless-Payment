@@ -81,6 +81,23 @@ fn acc_confirmation(){
 }
 
 
+// Testing inner_vane_pay_wo_resolver
+#[test]
+fn inner_vane_pay_wo_resolver_test(){
+	new_test_ext().execute_with(||{
+		// Multi Account Id
+		let acc = new_acc(1,5);
+		let multi_id = VanePayment::derive_multi_id(acc);
+		assert_ok!(VanePayment::inner_vane_pay_wo_resolver(1,5,100000));
+
+		// Checking Multi_Id balance
+		assert_eq!(Balances::free_balance(multi_id),100000);
+		assert_eq!(Balances::free_balance(5),1000);
+
+
+	})
+}
+
 // Checking multi-sig Call for an individual payee only.
 
 

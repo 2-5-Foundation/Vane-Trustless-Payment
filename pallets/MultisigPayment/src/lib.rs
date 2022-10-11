@@ -95,11 +95,20 @@ pub mod pallet {
 			timestamp: T::BlockNumber,
 
 		},
-		PayeeAddressConfirmed{
+		MultiAccountCreated {
+			account_id: T::AccountId,
+			timestamp: T::BlockNumber
+		},
+		BalanceTransferredAndLocked {
+			to_multi_id: T::AccountId,
+			from: T::AccountId,
+			timestamp: T::BlockNumber
+		},
+		PayeeAddressConfirmed {
 			account_id:T::AccountId,
 			timestamp: T::BlockNumber,
 		},
-		PayersAddressConfirmed{
+		PayersAddressConfirmed {
 			account_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		}
