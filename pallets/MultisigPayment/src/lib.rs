@@ -50,7 +50,8 @@ pub mod pallet {
 		Confirm,
 		ResolverChoice,
 	};
-
+	use binary_search::{binary_search, Direction};
+	
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 
 	parameter_types! {
@@ -158,6 +159,11 @@ pub mod pallet {
 			let user_account = ensure_signed(origin)?;
 
 			// Check if account already exists
+			let mut allowed_signers = <AllowedSigners<T>>::get();
+			let pos = allowed_signers
+					 .binary_search(&user_account)
+					 .ok()
+					 .ok_or(Error::<T>::AccountAlreadyExist)?;
 
 			// Check the account from Payer and Payee are the one registered in AllowedSigners storage
 			// This is crucial and this check should occur before the match statement
@@ -197,21 +203,22 @@ pub mod pallet {
 			//     4. Repeat the same process for
 
 
-			let mut confirmed_signers = <ConfirmedSigners<T>>::get();
-			let pos = confirmed_signers
-				.binary_search(&user_account)
-				.ok()
-				.ok_or(Error::<T>::AccountNotFound)?;
-			let account_signer = AccountSigners::<T>
-								::new(payer:confirmed_signers[pos].0, 
-									payee:confirmed_signers[pos].1,
-									resolver:Resolver.LegalTeam}
+			// let mut confirmed_signers = <ConfirmedSigners<T>>::get();
+			// let pos = confirmed_signers
+			// 	.binary_search(&user_account)
+			// 	.ok()
+			// 	.ok_or(Error::<T>::AccountNotFound)?;
+			// let account_signer = AccountSigners::<T>
+			// 					::new((payer:confirmed_signers[pos]).0, 
+			// 						(payee:confirmed_signers[pos]).1,
+			// 						(resolver:Resolver.LegalTeam));
 			
-			let multi_id = derive_multi_id(account_signer.clone());
+			// let multi_id = helper::derive_multi_id(account_signer.clone());
 			
 
 			Ok(())
 		}
+	
 	}
 
 }
