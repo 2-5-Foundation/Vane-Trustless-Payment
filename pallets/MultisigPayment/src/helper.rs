@@ -15,9 +15,11 @@ use sp_runtime::{
 	traits::{TrailingZeroInput}
 };
 use codec::{Encode, Decode};
+use sp_std::mem::drop;
 
 pub use utils::*;
 pub mod utils{
+	use frame_support::traits::{Currency, ExistenceRequirement};
 	use sp_io::hashing::blake2_256;
 	use sp_runtime::traits::StaticLookup;
 	use super::*;
@@ -129,17 +131,38 @@ pub mod utils{
 		pub(crate) fn inner_vane_pay_wo_resolver(
 			payer: T::AccountId,
 			payee: T::AccountId,
-
+			amount: BalanceOf<T>
 		) -> DispatchResult{
 
-			let accounts = AccountSigners::<T>::new(payer,payee,None);
+			let accounts = AccountSigners::<T>::new(payer.clone(),payee,None);
 			let multi_id = Self::derive_multi_id(accounts.clone());
 			AllowedSigners::<T>::insert(&multi_id,accounts);
-			Self::create_multi_account(multi_id)?;
+			Self::create_multi_account(multi_id.clone())?;
+
+			let time = <frame_system::Pallet::<T>>::block_number();
+
+			Self::deposit_event(Event::MultiAccountCreated{
+				account_id: multi_id.clone(),
+				timestamp: time
+			});
+
+			// Transfer balance from Payer to Multi_Id
+			T::Currency::transfer(&payer,&multi_id,amount, ExistenceRequirement::KeepAlive)?;
+
+			Self::deposit_event(Event::BalanceTransferredAndLocked {
+				to_multi_id: multi_id.clone(),
+				from: payer.clone(),
+				timestamp: time
+			});
+
+			drop(payer);
+			drop(multi_id);
 
 			Ok(())
 		}
 
+
+		// Takes in a multi_id account and register it to Account storage in system pallet
 
 		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult{
 			let account_info = AccountInfo::<T::Index, T::AccountData>{
