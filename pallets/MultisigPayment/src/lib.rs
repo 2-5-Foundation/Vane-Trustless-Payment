@@ -106,6 +106,7 @@ pub mod pallet {
 		MultiAccountExists,
 		ExceededSigners,
 		AccountAlreadyExist,
+		AccountNotFound,
 	}
 
 	#[pallet::call]
@@ -194,6 +195,20 @@ pub mod pallet {
 			//       object constructed
 			//     3. Hash the multi_id account
 			//     4. Repeat the same process for
+
+
+			let mut confirmed_signers = <ConfirmedSigners<T>>::get();
+			let pos = confirmed_signers
+				.binary_search(&user_account)
+				.ok()
+				.ok_or(Error::<T>::AccountNotFound)?;
+			let account_signer = AccountSigners::<T>
+								::new(payer:confirmed_signers[pos].0, 
+									payee:confirmed_signers[pos].1,
+									resolver:Resolver.LegalTeam}
+			
+			let multi_id = derive_multi_id(account_signer.clone());
+			
 
 			Ok(())
 		}
