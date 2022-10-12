@@ -235,7 +235,26 @@ pub mod pallet {
 					}
 				};
 
-			}
+			};
+
+			// Construct AccountSigner object from ConfirmedSigners storage
+			// let ConfirmedAccSigners = AccountSigners::<T>::new(
+			// 	ConfirmedSigners::<T>::get().get(0).ok_or(Error::<T>::UnexpectedError)?,
+			// 	ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?,
+				// The default resolver is none but logic will be made to be customizable
+				// None
+			// );
+
+
+			// Derive the multi_id of newly constructed AccountSigner and one from AllowedSigners
+
+
+
+			// Compute the hash of both multi_ids
+
+
+
+			// Compare if they are equal if they are not check which address is faulty
 
 			Ok(())
 		}

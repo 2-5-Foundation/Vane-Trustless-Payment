@@ -67,17 +67,11 @@ fn acc_confirmation(){
 
 
 		// Checking storage
-		//assert_eq!(VanePayment::get_signers(),vec![2,1]);
+		assert_eq!(VanePayment::get_signers(),vec![2,1]);
 
 		// This should fail
-		//assert_noop!(VanePayment::confirm_pay(Origin::signed(3),Confirm::Payer),
-		//	Error::<Test>::ExceededSigners);
-
-		//assert_noop!(VanePayment::confirm_pay(Origin::signed(2),Confirm::Payer),
-		//	Error::<Test>::ExceededSigners);
-
-		//assert_noop!(VanePayment::confirm_pay(Origin::signed(1),Confirm::Payer),
-		//	Error::<Test>::ExceededSigners);
+		assert_noop!(VanePayment::confirm_pay(Origin::signed(3),Confirm::Payer),
+			Error::<Test>::ExceededSigners);
 
 
 
