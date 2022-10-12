@@ -53,7 +53,6 @@ pub mod pallet {
 		Confirm,
 		ResolverChoice,
 	};
-	use binary_search::{binary_search, Direction};
 	
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 	pub(super) type AccountOf<T> =<T as frame_system::Config>::AccountId;
@@ -120,7 +119,7 @@ pub mod pallet {
 		UnexpectedError,
 		MultiAccountExists,
 		ExceededSigners,
-		AccountAlreadyExist,
+		AccountDoesNotExist,
 		AccountNotFound,
 	}
 
@@ -173,16 +172,16 @@ pub mod pallet {
 		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
 
 			let user_account = ensure_signed(origin)?;
-
 			// Check if account already exists
-			let mut allowed_signers = <AllowedSigners<T>>::get();
+			let mut allowed_signers = <AllowedSigners<T>>::get(user_account);
 			let pos = allowed_signers
-					 .binary_search(&user_account)
+					 .binary_search(user_account)
 					 .ok()
-					 .ok_or(Error::<T>::AccountAlreadyExist)?;
+					 .ok_or(Error::<T>::AccountDoesNotExist)?;
 
 			// Check the account from Payer and Payee are the one registered in AllowedSigners storage
 			// This is crucial and this check should occur before the match statement
+
 				match who {
 					Confirm::Payee => {
 
@@ -227,7 +226,7 @@ pub mod pallet {
 			// let account_signer = AccountSigners::<T>
 			// 					::new((payer:confirmed_signers[pos]).0, 
 			// 						(payee:confirmed_signers[pos]).1,
-			// 						(resolver:Resolver.LegalTeam));
+			// 						(resolver:None));
 			
 			// let multi_id = helper::derive_multi_id(account_signer.clone());
 			
