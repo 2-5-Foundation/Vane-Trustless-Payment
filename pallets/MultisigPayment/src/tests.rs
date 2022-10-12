@@ -5,10 +5,10 @@ use crate::helper::{AccountSigners, Confirm};
 
 
 // A testing Account Object
-pub fn new_acc(payer:u64,payee:u64) -> AccountSigners<Test>{
+pub fn new_acc(payee:u64,payer:u64) -> AccountSigners<Test>{
 	let acc = AccountSigners::<Test>::new(
-		payer,
 		payee,
+		payer,
 		None
 	);
 	acc
@@ -19,8 +19,8 @@ pub fn new_acc(payer:u64,payee:u64) -> AccountSigners<Test>{
 #[test]
 fn derive_multi_id_test(){
 	new_test_ext().execute_with(||{
-	    let acc = new_acc(1,2);
-		assert_eq!(VanePayment::derive_multi_id(acc),11691055940168842723);
+	    let acc = new_acc(2,1);
+		assert_eq!(VanePayment::derive_multi_id(acc),3149924236044933178);
 
 	})
 }
@@ -30,7 +30,7 @@ fn derive_multi_id_test(){
 #[test]
 fn multi_acc_formation_storage_test(){
 	new_test_ext().execute_with(||{
-		let acc = new_acc(1,2);
+		let acc = new_acc(2,1);
 		let multi_id = VanePayment::derive_multi_id(acc);
 		assert_ok!(VanePayment::create_multi_account(multi_id));
 
@@ -45,13 +45,13 @@ fn multi_acc_formation_storage_test(){
 
 
 // Testing Account Confirmation (Payee and Payer) and storage.
-#[test]
+//#[test]
 fn acc_confirmation(){
 	new_test_ext().execute_with(||{
 
 		// Configuring account storage;
 
-		let acc = new_acc(1,2);
+		let acc = new_acc(2,1);
 		let multi_id = VanePayment::derive_multi_id(acc);
 		assert_ok!(VanePayment::create_multi_account(multi_id));
 
@@ -86,7 +86,7 @@ fn acc_confirmation(){
 fn inner_vane_pay_wo_resolver_test(){
 	new_test_ext().execute_with(||{
 		// Multi Account Id
-		let acc = new_acc(1,5);
+		let acc = new_acc(5,1);
 		let multi_id = VanePayment::derive_multi_id(acc);
 		assert_ok!(VanePayment::inner_vane_pay_wo_resolver(1,5,100000));
 
