@@ -183,6 +183,14 @@ pub mod pallet {
 		#[pallet::weight(10)]
 		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
 
+			// 1. Check if 0 index is a occupied and if true check if its a Payee if true return Err
+			// 2. If its not a Payee then add new account which it will be a Payer
+			// 3. If index 0 is not occupied then check if the address is a Payer, if its true return Err
+			// 4. If the address is a Payee then push it to the vec.
+			//---------------------------------------------------------------------------------------//
+			// This will ensure that in 0th index is always Payee address and the Payer cannot confirm first
+
+
 			let user_account = ensure_signed(origin)?;
 			// Check the storage
 			let b_vec = ConfirmedSigners::<T>::get();
