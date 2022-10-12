@@ -94,7 +94,7 @@ pub mod utils{
 
 
 	// Revert Fund reasons enum
-	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum RevertReasons{
 		// The fee will be refunded, the payer must show a proof of wrong address.
 		WrongPayeeAddress,
@@ -112,7 +112,7 @@ pub mod utils{
 	}
 
 	// Confirmation enum which will be used to confirm the account_ids before dispatching multi-sig Call
-	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	#[derive(Encode, Decode, Clone,PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum Confirm{
 		Payer,
 		Payee

@@ -45,7 +45,7 @@ fn multi_acc_formation_storage_test(){
 
 
 // Testing Account Confirmation (Payee and Payer) and storage.
-//#[test]
+#[test]
 fn acc_confirmation(){
 	new_test_ext().execute_with(||{
 
@@ -56,23 +56,28 @@ fn acc_confirmation(){
 		assert_ok!(VanePayment::create_multi_account(multi_id));
 
 		// Payer and Payee confirmation;
-		// Payee confirmation
+		// Payer confirmation first should fail
+		assert_noop!(VanePayment::confirm_pay(Origin::signed(1),Confirm::Payer),Error::<Test>::WaitForPayeeToConfirm);
+		// Payee confirmation should work
 		assert_ok!(VanePayment::confirm_pay(Origin::signed(2),Confirm::Payee));
-		// Payer confirmation
-		assert_ok!(VanePayment::confirm_pay(Origin::signed(1),Confirm::Payer));
+		// Payee re-confirmation should fail
+		assert_noop!(VanePayment::confirm_pay(Origin::signed(2),Confirm::Payee), Error::<Test>::PayeeAlreadyConfirmed);
+		// Payer Confirmation
+		assert_ok!(VanePayment::confirm_pay(Origin::signed(1), Confirm::Payer));
+
 
 		// Checking storage
-		assert_eq!(VanePayment::get_signers(),vec![1,2]);
+		//assert_eq!(VanePayment::get_signers(),vec![2,1]);
 
 		// This should fail
-		assert_noop!(VanePayment::confirm_pay(Origin::signed(3),Confirm::Payer),
-			Error::<Test>::ExceededSigners);
+		//assert_noop!(VanePayment::confirm_pay(Origin::signed(3),Confirm::Payer),
+		//	Error::<Test>::ExceededSigners);
 
-		assert_noop!(VanePayment::confirm_pay(Origin::signed(2),Confirm::Payer),
-			Error::<Test>::ExceededSigners);
+		//assert_noop!(VanePayment::confirm_pay(Origin::signed(2),Confirm::Payer),
+		//	Error::<Test>::ExceededSigners);
 
-		assert_noop!(VanePayment::confirm_pay(Origin::signed(1),Confirm::Payer),
-			Error::<Test>::ExceededSigners);
+		//assert_noop!(VanePayment::confirm_pay(Origin::signed(1),Confirm::Payer),
+		//	Error::<Test>::ExceededSigners);
 
 
 
