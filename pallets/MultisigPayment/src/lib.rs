@@ -87,13 +87,22 @@ pub mod pallet {
 	#[pallet::getter(fn get_signers)]
 	pub(super) type ConfirmedSigners<T: Config> = StorageValue<_,BoundedVec<T::AccountId, MaxSigners>,ValueQuery>;
 
+	// Number of reverted or faulty transaction a payer did
+	#[pallet::storage]
+	#[pallet::getter(fn get_failed_txn_payer)]
+	pub(super) type RevertedTxnPayer<T: Config> = StorageMap<_,Blake2_256,T::AccountId,u32,ValueQuery>;
+
+	// Number of reverted or faulty transaction a payee did
+	#[pallet::storage]
+	#[pallet::getter(fn get_failed_txn_payee)]
+	pub(super) type RevertedTxnPayee<T: Config> = StorageMap<_,Blake2_256,T::AccountId,u32,ValueQuery>;
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config>{
 		CallExecuted{
 			multi_id: T::AccountId,
 			timestamp: T::BlockNumber,
-
 		},
 		MultiAccountCreated {
 			account_id: T::AccountId,
@@ -111,7 +120,8 @@ pub mod pallet {
 		PayersAddressConfirmed {
 			account_id: T::AccountId,
 			timestamp: T::BlockNumber,
-		}
+		},
+
 
 	}
 	#[pallet::error]
@@ -119,8 +129,10 @@ pub mod pallet {
 		UnexpectedError,
 		MultiAccountExists,
 		ExceededSigners,
-		AccountDoesNotExist,
-		AccountNotFound,
+		AccountAlreadyExist,
+		WaitForPayeeToConfirm,
+		PayerAlreadyConfirmed,
+		PayeeAlreadyConfirmed
 	}
 
 	#[pallet::call]
@@ -171,65 +183,78 @@ pub mod pallet {
 		#[pallet::weight(10)]
 		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
 
-			let user_account = ensure_signed(origin)?;
-			// Check if account already exists
-			let mut allowed_signers = <AllowedSigners<T>>::get(user_account);
-			let pos = allowed_signers
-					 .binary_search(user_account)
-					 .ok()
-					 .ok_or(Error::<T>::AccountDoesNotExist)?;
+			// 1. Check if 0 index is a occupied and if true check if its a Payee if true return Err
+			// 2. If its not a Payee then add new account which it will be a Payer
+			// 3. If index 0 is not occupied then check if the address is a Payer, if its true return Err
+			// 4. If the address is a Payee then push it to the vec.
+			//---------------------------------------------------------------------------------------//
+			// This will ensure that in 0th index is always Payee address and the Payer cannot confirm first
 
-			// Check the account from Payer and Payee are the one registered in AllowedSigners storage
-			// This is crucial and this check should occur before the match statement
+
+			let user_account = ensure_signed(origin)?;
+			// Check the storage
+			let b_vec = ConfirmedSigners::<T>::get();
+
+			if let Some(addr) = b_vec.get(0){
+				if addr.eq(&user_account){
+					return Err(Error::<T>::PayeeAlreadyConfirmed.into())
+				}else{
+
+					ConfirmedSigners::<T>::try_mutate(|vec|{
+						vec.try_push(user_account.clone())
+					}).map_err(|_|Error::<T>::ExceededSigners)?;
+
+					let time = <frame_system::Pallet<T>>::block_number();
+
+					Self::deposit_event(Event::PayeeAddressConfirmed{
+						account_id:user_account,
+						timestamp: time
+					    }
+					);
+
+				}
+			}else{
 
 				match who {
+					Confirm::Payer => return Err(Error::<T>::WaitForPayeeToConfirm.into()),
+
 					Confirm::Payee => {
 
-						<ConfirmedSigners<T>>::try_mutate(|account_vec| {
+						ConfirmedSigners::<T>::try_mutate(|vec|{
+							vec.try_push(user_account.clone())
+						}).map_err(|_|Error::<T>::ExceededSigners)?;
 
-							account_vec.try_insert(0,user_account.clone())
+						let time = <frame_system::Pallet<T>>::block_number();
 
-						}).map_err(|_| Error::<T>::ExceededSigners)?;
+						Self::deposit_event(Event::PayeeAddressConfirmed{
+							account_id:user_account,
+							timestamp: time
+						}
+						);
 
-						let timestamp = <frame_system::Pallet<T>>::block_number();
-						Self::deposit_event(Event::PayeeAddressConfirmed {account_id:user_account, timestamp});
-
-					},
-					Confirm::Payer => {
-						<ConfirmedSigners<T>>::try_mutate(|account_vec| {
-
-							account_vec.try_insert(1,user_account.clone())
-
-						}).map_err(|_| Error::<T>::ExceededSigners)?;
-
-						let timestamp = <frame_system::Pallet<T>>::block_number();
-						Self::deposit_event(Event::PayersAddressConfirmed{account_id:user_account, timestamp});
-
-					},
+					}
 				};
 
-			// We will discuss first my head is spinning,I want to get the logic right
-			// Next steps are
-			//     1. After registering the specific account to the storage,
-			//        construct the AccountSigners object using those accounts
-			//     2. Derive the multi_id Account from those accounts using the Account Signers
-			//       object constructed
-			//     3. Hash the multi_id account
-			//     4. Repeat the same process for
+			};
+
+			// Construct AccountSigner object from ConfirmedSigners storage
+			// let ConfirmedAccSigners = AccountSigners::<T>::new(
+			// 	ConfirmedSigners::<T>::get().get(0).ok_or(Error::<T>::UnexpectedError)?,
+			// 	ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?,
+				// The default resolver is none but logic will be made to be customizable
+				// None
+			// );
 
 
-			// let mut confirmed_signers = <ConfirmedSigners<T>>::get();
-			// let pos = confirmed_signers
-			// 	.binary_search(&user_account)
-			// 	.ok()
-			// 	.ok_or(Error::<T>::AccountNotFound)?;
-			// let account_signer = AccountSigners::<T>
-			// 					::new((payer:confirmed_signers[pos]).0, 
-			// 						(payee:confirmed_signers[pos]).1,
-			// 						(resolver:None));
-			
-			// let multi_id = helper::derive_multi_id(account_signer.clone());
-			
+			// Derive the multi_id of newly constructed AccountSigner and one from AllowedSigners
+
+
+
+			// Compute the hash of both multi_ids
+
+
+
+			// Compare if they are equal if they are not check which address is faulty
 
 			Ok(())
 		}

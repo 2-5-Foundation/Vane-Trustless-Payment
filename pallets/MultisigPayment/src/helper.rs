@@ -31,8 +31,8 @@ pub mod utils{
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct AccountSigners<T: Config>{
-		payer: T::AccountId,
 		payee: T::AccountId,
+		payer: T::AccountId,
 		resolver: Option<Resolver<T>>,
 	}
 
@@ -62,13 +62,13 @@ pub mod utils{
 
 	impl<T> AccountSigners<T> where T:Config{
 		pub fn new(
-			payer: T::AccountId,
 			payee: T::AccountId,
+			payer: T::AccountId,
 			resolver:Option<Resolver<T>>
 		) -> Self{
 			AccountSigners{
-				payer,
 				payee,
+				payer,
 				resolver,
 			}
 		}
@@ -94,7 +94,7 @@ pub mod utils{
 
 
 	// Revert Fund reasons enum
-	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum RevertReasons{
 		// The fee will be refunded, the payer must show a proof of wrong address.
 		WrongPayeeAddress,
@@ -112,7 +112,7 @@ pub mod utils{
 	}
 
 	// Confirmation enum which will be used to confirm the account_ids before dispatching multi-sig Call
-	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	#[derive(Encode, Decode, Clone,PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	pub enum Confirm{
 		Payer,
 		Payee
@@ -134,7 +134,7 @@ pub mod utils{
 			amount: BalanceOf<T>
 		) -> DispatchResult{
 
-			let accounts = AccountSigners::<T>::new(payer.clone(),payee,None);
+			let accounts = AccountSigners::<T>::new(payee,payer.clone(),None);
 			let multi_id = Self::derive_multi_id(accounts.clone());
 			AllowedSigners::<T>::insert(&multi_id,accounts);
 			Self::create_multi_account(multi_id.clone())?;
@@ -186,9 +186,9 @@ pub mod utils{
 				let (acc1, acc2, opt_acc3) =
 					match account_object.get_resolver(){
 					Some(resolver) => {
-						 (account_object.get_payer(),account_object.get_payee(),account_object.get_legal_account())
+						 (account_object.get_payee(),account_object.get_payer(),account_object.get_legal_account())
 					},
-					None => (account_object.get_payer(),account_object.get_payee(),None)
+					None => (account_object.get_payee(),account_object.get_payer(),None)
 				};
 
 			let multi_account = if let Some(acc3) = opt_acc3{
