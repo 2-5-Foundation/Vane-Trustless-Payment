@@ -57,6 +57,7 @@ pub mod utils{
 	pub enum ResolverChoice{
 		LegalTeam,
 		Governance,
+		None
 	}
 
 
@@ -136,7 +137,7 @@ pub mod utils{
 
 			let accounts = AccountSigners::<T>::new(payee,payer.clone(),None);
 			let multi_id = Self::derive_multi_id(accounts.clone());
-			AllowedSigners::<T>::insert(&multi_id,accounts);
+			AllowedSigners::<T>::insert(&payer,accounts);
 			Self::create_multi_account(multi_id.clone())?;
 
 			let time = <frame_system::Pallet::<T>>::block_number();
@@ -150,13 +151,10 @@ pub mod utils{
 			T::Currency::transfer(&payer,&multi_id,amount, ExistenceRequirement::KeepAlive)?;
 
 			Self::deposit_event(Event::BalanceTransferredAndLocked {
-				to_multi_id: multi_id.clone(),
-				from: payer.clone(),
+				to_multi_id: multi_id,
+				from: payer,
 				timestamp: time
 			});
-
-			drop(payer);
-			drop(multi_id);
 
 			Ok(())
 		}
