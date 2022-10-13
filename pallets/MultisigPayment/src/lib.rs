@@ -242,11 +242,6 @@ pub mod pallet {
 							.map_err(|_|Error::<T>::UnexpectedError)?;
 					}
 
-
-
-
-					// Compare if they are equal if they are not check which address is faulty
-
 				}
 			}else{
 

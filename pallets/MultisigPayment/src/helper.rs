@@ -119,6 +119,18 @@ pub mod utils{
 		Payee
 	}
 
+	// Call executed struct information
+	#[derive(Encode, Decode, Clone,PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	#[scale_info(skip_type_params(T))]
+	pub struct CallExecuted<T:Config>{
+		time: T::BlockNumber,
+		payer: T::AccountId,
+		payee: T::AccountId,
+		allowed_multi_id: T::AccountId,
+		confirmed_multi_id: T::AccountId,
+		proof: T::Hash
+	}
+
 
 
 	impl<T:Config> Pallet<T>{
@@ -156,6 +168,18 @@ pub mod utils{
 				timestamp: time
 			});
 
+			Ok(())
+		}
+
+		// Dispatching Call helper
+		pub(crate) fn dispatch_call(
+			proof:T::Hash,
+			payer: T::AccountId,
+			payee: T::AccountId,
+			allowed_multi_id: T::AccountId,
+			confirmed_multi_id: T::AccountId
+		) -> DispatchResult{
+			// Store the proof and associated data of call execution
 			Ok(())
 		}
 
