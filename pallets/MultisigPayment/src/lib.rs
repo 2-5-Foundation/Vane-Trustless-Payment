@@ -45,7 +45,9 @@ pub mod pallet {
 		pallet_prelude::*
 	};
 	use frame_system::pallet_prelude::*;
+	use sp_core::blake2_256;
 	use sp_runtime::{parameter_types, traits::{StaticLookup}};
+	use sp_runtime::traits::TrailingZeroInput;
 	use primitive::OrderTrait;
 	use super::helper::{
 		AccountSigners,
@@ -117,7 +119,7 @@ pub mod pallet {
 			account_id:T::AccountId,
 			timestamp: T::BlockNumber,
 		},
-		PayersAddressConfirmed {
+		PayerAddressConfirmed {
 			account_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		},
@@ -126,13 +128,17 @@ pub mod pallet {
 	}
 	#[pallet::error]
 	pub enum Error<T>{
+		// Any system error
 		UnexpectedError,
+
 		MultiAccountExists,
 		ExceededSigners,
 		AccountAlreadyExist,
 		WaitForPayeeToConfirm,
+		WaitForPayerToConfirm,
 		PayerAlreadyConfirmed,
-		PayeeAlreadyConfirmed
+		PayeeAlreadyConfirmed,
+		NotAllowedPayeeOrPaymentNotInitialized,
 	}
 
 	#[pallet::call]
@@ -158,8 +164,8 @@ pub mod pallet {
 														::lookup(payee)?;
 
 			match resolver {
-				ResolverChoice::LegalTeam => Self::inner_vane_pay_wo_resolver(payer,payee, amount)?,
-				ResolverChoice::Governance=> ()
+				ResolverChoice::None => Self::inner_vane_pay_wo_resolver(payer,payee, amount)?,
+				_=> ()
 			}
 
 			Ok(())
@@ -206,11 +212,35 @@ pub mod pallet {
 
 					let time = <frame_system::Pallet<T>>::block_number();
 
-					Self::deposit_event(Event::PayeeAddressConfirmed{
-						account_id:user_account,
-						timestamp: time
+					Self::deposit_event(Event::PayerAddressConfirmed{
+							account_id:user_account,
+							timestamp: time
 					    }
 					);
+
+					// Construct AccountSigner object from ConfirmedSigners storage
+
+					let ConfirmedAccSigners = AccountSigners::<T>::new(
+						ConfirmedSigners::<T>::get().get(0).ok_or(Error::<T>::UnexpectedError)?.clone(),
+						ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?.clone(),
+						// The default resolver is none but logic will be made to be customizable
+						None
+					);
+
+					// Derive the multi_id of newly constructed AccountSigner and one from AllowedSigners
+					let confirmed_multi_id = Self::derive_multi_id(ConfirmedAccSigners);
+
+					// Get the AllowedSigners from storage
+					let payee = ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?.clone();
+					let allowed_signers = AllowedSigners::<T>::get(payee).ok_or(Error::<T>::NotAllowedPayeeOrPaymentNotInitialized)?;
+
+					let allowed_multi_id = Self::derive_multi_id(allowed_signers);
+					// Compute the hash of both multi_ids (proof)
+					if confirmed_multi_id.eq(&allowed_multi_id){
+						let encoded_proof = (allowed_multi_id, confirmed_multi_id).using_encoded(blake2_256);
+						let proof = Decode::decode(&mut TrailingZeroInput::new(encoded_proof.as_ref()))
+							.map_err(|_|Error::<T>::UnexpectedError)?;
+					}
 
 				}
 			}else{
@@ -229,32 +259,13 @@ pub mod pallet {
 						Self::deposit_event(Event::PayeeAddressConfirmed{
 							account_id:user_account,
 							timestamp: time
-						}
+						  }
 						);
 
 					}
 				};
 
 			};
-
-			// Construct AccountSigner object from ConfirmedSigners storage
-			// let ConfirmedAccSigners = AccountSigners::<T>::new(
-			// 	ConfirmedSigners::<T>::get().get(0).ok_or(Error::<T>::UnexpectedError)?,
-			// 	ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?,
-				// The default resolver is none but logic will be made to be customizable
-				// None
-			// );
-
-
-			// Derive the multi_id of newly constructed AccountSigner and one from AllowedSigners
-
-
-
-			// Compute the hash of both multi_ids
-
-
-
-			// Compare if they are equal if they are not check which address is faulty
 
 			Ok(())
 		}

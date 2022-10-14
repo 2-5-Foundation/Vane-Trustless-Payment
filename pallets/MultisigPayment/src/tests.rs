@@ -1,7 +1,7 @@
 use super::*;
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
-use crate::helper::{AccountSigners, Confirm};
+use crate::helper::{AccountSigners, Confirm, ResolverChoice};
 
 
 // A testing Account Object
@@ -46,15 +46,15 @@ fn multi_acc_formation_storage_test(){
 
 // Testing Account Confirmation (Payee and Payer) and storage.
 #[test]
-fn acc_confirmation(){
+fn account_confirmation(){
 	new_test_ext().execute_with(||{
 
 		// Configuring account storage;
 
-		let acc = new_acc(2,1);
-		let multi_id = VanePayment::derive_multi_id(acc);
-		assert_ok!(VanePayment::create_multi_account(multi_id));
 
+
+		// Vane Pay first
+		assert_ok!(VanePayment::vane_pay(Origin::signed(1),Some(2),1000,ResolverChoice::None));
 		// Payer and Payee confirmation;
 		// Payer confirmation first should fail
 		assert_noop!(VanePayment::confirm_pay(Origin::signed(1),Confirm::Payer),Error::<Test>::WaitForPayeeToConfirm);
