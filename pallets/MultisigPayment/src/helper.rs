@@ -19,13 +19,22 @@ use sp_std::mem::drop;
 
 pub use utils::*;
 pub mod utils{
+	use frame_support::dispatch::RawOrigin;
 	use frame_support::traits::{Currency, ExistenceRequirement};
 	use sp_io::hashing::blake2_256;
 	use sp_runtime::traits::StaticLookup;
 	use super::*;
-	use frame_system::AccountInfo;
-
-
+	use frame_system::{Account, AccountInfo};
+	use frame_support::{
+		dispatch::{
+			DispatchErrorWithPostInfo, DispatchResult, DispatchResultWithPostInfo, GetDispatchInfo,
+			PostDispatchInfo,
+		},
+	};
+	use sp_runtime::{
+		traits::{Dispatchable, TrailingZeroInput, Zero},
+		DispatchError,
+	};
 
 	// A struct by which it should be used as a source of signatures.
 	#[derive(Encode, Decode, Clone,PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -93,6 +102,39 @@ pub mod utils{
 		}
 	}
 
+	// Call executed struct information
+	#[derive(Encode, Decode, Clone,PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	#[scale_info(skip_type_params(T))]
+	pub struct CallExecuted<T:Config>{
+		time: T::BlockNumber,
+		payer: T::AccountId,
+		payee: T::AccountId,
+		allowed_multi_id: T::AccountId,
+		confirmed_multi_id: T::AccountId,
+		proof: T::Hash
+	}
+
+	impl<T> CallExecuted<T> where T: Config {
+		pub(super) fn new(
+			time: T::BlockNumber,
+			payer: T::AccountId,
+			payee: T::AccountId,
+			allowed_multi_id: T::AccountId,
+			confirmed_multi_id: T::AccountId,
+			proof: T::Hash
+		)-> Self{
+			CallExecuted{
+				time,
+				payer,
+				payee,
+				allowed_multi_id,
+				confirmed_multi_id,
+				proof
+			}
+
+		}
+	}
+
 
 	// Revert Fund reasons enum
 	#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -117,18 +159,6 @@ pub mod utils{
 	pub enum Confirm{
 		Payer,
 		Payee
-	}
-
-	// Call executed struct information
-	#[derive(Encode, Decode, Clone,PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-	#[scale_info(skip_type_params(T))]
-	pub struct CallExecuted<T:Config>{
-		time: T::BlockNumber,
-		payer: T::AccountId,
-		payee: T::AccountId,
-		allowed_multi_id: T::AccountId,
-		confirmed_multi_id: T::AccountId,
-		proof: T::Hash
 	}
 
 
@@ -172,14 +202,22 @@ pub mod utils{
 		}
 
 		// Dispatching Call helper
-		pub(crate) fn dispatch_call(
-			proof:T::Hash,
-			payer: T::AccountId,
-			payee: T::AccountId,
+		pub(crate) fn dispatch_transfer_call(
+			//proof:T::Hash,
+			//payer: T::AccountId,
+			payee: AccountFor<T>,
 			allowed_multi_id: T::AccountId,
 			confirmed_multi_id: T::AccountId
 		) -> DispatchResult{
 			// Store the proof and associated data of call execution
+			// construct transfer call from pallet balances
+			let multi_account_id = <<T as frame_system::Config>::Lookup as StaticLookup>
+			::unlookup(confirmed_multi_id.clone());
+
+			//let call = pallet_balances::Call::transfer_all::<T,()>{dest: multi_account_id, keep_alive: false};
+			//let result = call.dispatch(RawOrigin::Signed(allowed_multi_id.clone()).into());
+			<pallet_balances::Pallet<T,()>>::transfer_all(RawOrigin::Signed(allowed_multi_id).into(),payee,false)?;
+
 			Ok(())
 		}
 

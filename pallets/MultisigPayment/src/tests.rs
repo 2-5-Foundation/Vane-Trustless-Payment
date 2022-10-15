@@ -65,6 +65,10 @@ fn account_confirmation(){
 		// Payer Confirmation
 		assert_ok!(VanePayment::confirm_pay(Origin::signed(1), Confirm::Payer));
 
+		// Check the storage for multi_id
+		//assert_eq!(Balances::free_balance(3149924236044933178),0);
+		// Check the storage for payee
+		assert_eq!(Balances::free_balance(1),1_000_000);
 
 		// Checking storage
 		assert_eq!(VanePayment::get_signers(),vec![2,1]);
@@ -98,7 +102,12 @@ fn inner_vane_pay_wo_resolver_test(){
 }
 
 // Checking multi-sig Call for an individual payee only.
+#[test]
+fn multi_sig_single(){
+	new_test_ext().execute_with(||{
 
+	})
+}
 
 
 

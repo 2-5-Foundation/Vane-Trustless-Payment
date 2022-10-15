@@ -46,6 +46,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use sp_core::blake2_256;
+	use sp_std::vec::Vec;
 	use sp_runtime::{parameter_types, traits::{StaticLookup}};
 	use sp_runtime::traits::TrailingZeroInput;
 	use primitive::OrderTrait;
@@ -54,8 +55,9 @@ pub mod pallet {
 		RevertReasons,
 		Confirm,
 		ResolverChoice,
+		CallExecuted
 	};
-	
+
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 	pub(super) type AccountOf<T> =<T as frame_system::Config>::AccountId;
 	pub(super) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountOf<T>>>::Balance;
@@ -67,7 +69,7 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + pallet_balances::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		//type Order: OrderTrait + TypeInfo + Decode + Encode + Clone + PartialEq + Debug;
 		type Currency : Currency<Self::AccountId>;
@@ -77,6 +79,11 @@ pub mod pallet {
 	#[pallet::getter(fn get_resolver)]
 	pub(super) type ResolverSigner<T: Config> = StorageValue<_,T::AccountId>;
 
+	// Number of multi-sig transactions done by a specific account_id
+	#[pallet::storage]
+	#[pallet::unbounded]
+	#[pallet::getter(fn get_account_multitxns)]
+	pub(super) type AccountMultiTxn<T: Config> = StorageMap<_,Blake2_256, T::AccountId, Vec<CallExecuted<T>>, ValueQuery>;
 
 	// Introduced StorageMap because this storage should contain more  than one instance of AccountSigners
 
@@ -171,15 +178,6 @@ pub mod pallet {
 			Ok(())
 		}
 
-		// If the payer accidently makes a mistake due to RevertReasons the funds can be refunded back
-		// Punishment will occur if the reason is personal.
-
-		// We should introduce some sort of limit for WrongAddress reason occurrence.
-		#[pallet::weight(10)]
-		pub fn revert_fund(origin:OriginFor<T>, reason:RevertReasons) -> DispatchResult{
-			Ok(())
-		}
-
 		// Get the confirm account address and store them in Signers Storage Item. Sort and make sure
 		// buyer's address is first
 		// Always make sure if its the buyer, he should be first in the vector,
@@ -232,14 +230,20 @@ pub mod pallet {
 
 					// Get the AllowedSigners from storage
 					let payee = ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?.clone();
-					let allowed_signers = AllowedSigners::<T>::get(payee).ok_or(Error::<T>::NotAllowedPayeeOrPaymentNotInitialized)?;
+					let allowed_signers = AllowedSigners::<T>::get(payee.clone()).ok_or(Error::<T>::NotAllowedPayeeOrPaymentNotInitialized)?;
+
 
 					let allowed_multi_id = Self::derive_multi_id(allowed_signers);
 					// Compute the hash of both multi_ids (proof)
 					if confirmed_multi_id.eq(&allowed_multi_id){
-						let encoded_proof = (allowed_multi_id, confirmed_multi_id).using_encoded(blake2_256);
+						let encoded_proof = (allowed_multi_id.clone(), confirmed_multi_id.clone()).using_encoded(blake2_256);
 						let proof = Decode::decode(&mut TrailingZeroInput::new(encoded_proof.as_ref()))
 							.map_err(|_|Error::<T>::UnexpectedError)?;
+
+						let payeee = <<T as frame_system::Config>::Lookup as StaticLookup>
+						::unlookup(payee);
+
+						Self::dispatch_transfer_call(payeee, allowed_multi_id, confirmed_multi_id)?;
 					}
 
 				}
@@ -269,7 +273,16 @@ pub mod pallet {
 
 			Ok(())
 		}
-	
+
+
+		// If the payer accidently makes a mistake due to RevertReasons the funds can be refunded back
+		// Punishment will occur if the reason is personal.
+
+		// We should introduce some sort of limit for WrongAddress reason occurrence.
+		#[pallet::weight(10)]
+		pub fn revert_fund(origin:OriginFor<T>, reason:RevertReasons) -> DispatchResult{
+			Ok(())
+		}
 	}
 
 }
