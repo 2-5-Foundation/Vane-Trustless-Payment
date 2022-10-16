@@ -106,30 +106,30 @@ pub mod utils{
 	#[derive(Encode, Decode, Clone,PartialEq, Eq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
 	#[scale_info(skip_type_params(T))]
 	pub struct CallExecuted<T:Config>{
-		time: T::BlockNumber,
 		payer: T::AccountId,
 		payee: T::AccountId,
 		allowed_multi_id: T::AccountId,
 		confirmed_multi_id: T::AccountId,
-		proof: T::Hash
+		proof: T::Hash,
+		time: T::BlockNumber
 	}
 
 	impl<T> CallExecuted<T> where T: Config {
 		pub(super) fn new(
-			time: T::BlockNumber,
 			payer: T::AccountId,
 			payee: T::AccountId,
 			allowed_multi_id: T::AccountId,
 			confirmed_multi_id: T::AccountId,
-			proof: T::Hash
+			proof: T::Hash,
+			time: T::BlockNumber,
 		)-> Self{
 			CallExecuted{
-				time,
 				payer,
 				payee,
 				allowed_multi_id,
 				confirmed_multi_id,
-				proof
+				proof,
+				time
 			}
 
 		}
@@ -203,20 +203,41 @@ pub mod utils{
 
 		// Dispatching Call helper
 		pub(crate) fn dispatch_transfer_call(
-			//proof:T::Hash,
-			//payer: T::AccountId,
-			payee: AccountFor<T>,
+			proof:T::Hash,
+			payer: T::AccountId,
+			payee: T::AccountId,
 			allowed_multi_id: T::AccountId,
 			confirmed_multi_id: T::AccountId
 		) -> DispatchResult{
 			// Store the proof and associated data of call execution
 			// construct transfer call from pallet balances
-			let multi_account_id = <<T as frame_system::Config>::Lookup as StaticLookup>
-			::unlookup(confirmed_multi_id.clone());
+			let acc_payee = payee.clone();
+			let payee = <<T as frame_system::Config>::Lookup as StaticLookup>
+			::unlookup(payee);
 
-			//let call = pallet_balances::Call::transfer_all::<T,()>{dest: multi_account_id, keep_alive: false};
-			//let result = call.dispatch(RawOrigin::Signed(allowed_multi_id.clone()).into());
-			<pallet_balances::Pallet<T,()>>::transfer_all(RawOrigin::Signed(allowed_multi_id).into(),payee,false)?;
+
+			<pallet_balances::Pallet<T,()>>::transfer_all(RawOrigin::Signed(allowed_multi_id.clone()).into(),payee,false)
+				.map_err(|_|Error::<T>::MultiSigCallFailed)?;
+
+			let time = <frame_system::Pallet<T>>::block_number();
+
+			let call_exe_object = CallExecuted::<T>::new(
+				payer.clone(),
+				acc_payee,
+				allowed_multi_id,
+				confirmed_multi_id.clone(),
+				proof,
+				time
+			);
+
+			AccountMultiTxns::<T>::mutate(payer,|vec|{
+					vec.push(call_exe_object)
+			});
+
+			Self::deposit_event(Event::CallExecuted {
+				multi_id: confirmed_multi_id,
+				timestamp: time
+			});
 
 			Ok(())
 		}

@@ -77,7 +77,7 @@ impl pallet_multisig_payment::Config for Test {
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
 	pallet_balances::GenesisConfig::<Test> {
-		balances: vec![(1, 1_000_000), (2, 100000), (3, 70000), (4, 120000), (5, 1000)],
+		balances: vec![(1, 1_000_000), (2, 100_000), (3, 70000), (4, 120000), (5, 1000)],
 	}
 		.assimilate_storage(&mut t)
 		.unwrap();

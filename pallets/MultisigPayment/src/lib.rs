@@ -45,7 +45,7 @@ pub mod pallet {
 		pallet_prelude::*
 	};
 	use frame_system::pallet_prelude::*;
-	use sp_core::blake2_256;
+	use sp_io::hashing::blake2_256;
 	use sp_std::vec::Vec;
 	use sp_runtime::{parameter_types, traits::{StaticLookup}};
 	use sp_runtime::traits::TrailingZeroInput;
@@ -83,7 +83,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn get_account_multitxns)]
-	pub(super) type AccountMultiTxn<T: Config> = StorageMap<_,Blake2_256, T::AccountId, Vec<CallExecuted<T>>, ValueQuery>;
+	pub(super) type AccountMultiTxns<T: Config> = StorageMap<_,Blake2_256, T::AccountId, Vec<CallExecuted<T>>, ValueQuery>;
 
 	// Introduced StorageMap because this storage should contain more  than one instance of AccountSigners
 
@@ -92,6 +92,9 @@ pub mod pallet {
 	#[pallet::getter(fn get_allowed_signers)]
 	pub(super) type AllowedSigners<T: Config> = StorageMap<_,Blake2_256,T::AccountId,AccountSigners<T>>;
 
+	// 1. Change confirmed signers to be StorageMap and key to be the payer's address
+	// 2. Change the way confirmed addresses are stored and make sure the payer starts
+	// 3. and clear the storage once the call is executed, clear multi_id account and confirmed and allowed signers
 	#[pallet::storage]
 	#[pallet::getter(fn get_signers)]
 	pub(super) type ConfirmedSigners<T: Config> = StorageValue<_,BoundedVec<T::AccountId, MaxSigners>,ValueQuery>;
@@ -130,6 +133,13 @@ pub mod pallet {
 			account_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		},
+		SubmittedPayment {
+			from_account: T::AccountId,
+			to_account: T::AccountId,
+			amount: BalanceOf<T>,
+			resolver: Option<ResolverChoice>,
+			timestamp: T::BlockNumber,
+		}
 
 
 	}
@@ -138,6 +148,7 @@ pub mod pallet {
 		// Any system error
 		UnexpectedError,
 
+		FailedToMatchAccounts,
 		MultiAccountExists,
 		ExceededSigners,
 		AccountAlreadyExist,
@@ -146,6 +157,7 @@ pub mod pallet {
 		PayerAlreadyConfirmed,
 		PayeeAlreadyConfirmed,
 		NotAllowedPayeeOrPaymentNotInitialized,
+		MultiSigCallFailed
 	}
 
 	#[pallet::call]
@@ -171,7 +183,18 @@ pub mod pallet {
 														::lookup(payee)?;
 
 			match resolver {
-				ResolverChoice::None => Self::inner_vane_pay_wo_resolver(payer,payee, amount)?,
+				ResolverChoice::None => {
+					Self::inner_vane_pay_wo_resolver(payer.clone(), payee.clone(), amount)?;
+					let time = <frame_system::Pallet<T>>::block_number();
+
+				   	Self::deposit_event(Event::SubmittedPayment {
+						from_account: payer,
+						to_account: payee,
+						amount,
+						resolver: None,
+						timestamp: time
+					})
+				},
 				_=> ()
 			}
 
@@ -229,8 +252,10 @@ pub mod pallet {
 					let confirmed_multi_id = Self::derive_multi_id(ConfirmedAccSigners);
 
 					// Get the AllowedSigners from storage
-					let payee = ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?.clone();
-					let allowed_signers = AllowedSigners::<T>::get(payee.clone()).ok_or(Error::<T>::NotAllowedPayeeOrPaymentNotInitialized)?;
+					let payer = ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?.clone();
+					let payee = ConfirmedSigners::<T>::get().get(0).ok_or(Error::<T>::UnexpectedError)?.clone();
+
+					let allowed_signers = AllowedSigners::<T>::get(payer.clone()).ok_or(Error::<T>::NotAllowedPayeeOrPaymentNotInitialized)?;
 
 
 					let allowed_multi_id = Self::derive_multi_id(allowed_signers);
@@ -240,10 +265,11 @@ pub mod pallet {
 						let proof = Decode::decode(&mut TrailingZeroInput::new(encoded_proof.as_ref()))
 							.map_err(|_|Error::<T>::UnexpectedError)?;
 
-						let payeee = <<T as frame_system::Config>::Lookup as StaticLookup>
-						::unlookup(payee);
 
-						Self::dispatch_transfer_call(payeee, allowed_multi_id, confirmed_multi_id)?;
+						Self::dispatch_transfer_call(proof, payer, payee, allowed_multi_id, confirmed_multi_id)?;
+
+					}else{
+						return Err(Error::<T>::FailedToMatchAccounts.into())
 					}
 
 				}
