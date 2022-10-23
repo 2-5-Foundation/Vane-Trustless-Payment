@@ -27,10 +27,9 @@ pub use pallet::*;
 #[cfg(test)]
 mod mock;
 
+mod helper;
 #[cfg(test)]
 mod tests;
-mod helper;
-
 
 //#[cfg(feature = "runtime-benchmarks")]
 //mod benchmarking;
@@ -39,27 +38,19 @@ mod helper;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet;
-	use frame_support::{
-		traits::tokens::currency::Currency,
-		pallet_prelude::*
-	};
+	use super::helper::{AccountSigners, CallExecuted, Confirm, ResolverChoice, RevertReasons};
+	use frame_support::{pallet, pallet_prelude::*, traits::tokens::currency::Currency};
 	use frame_system::pallet_prelude::*;
-	use sp_io::hashing::blake2_256;
-	use sp_std::vec::Vec;
-	use sp_runtime::{parameter_types, traits::{StaticLookup}};
-	use sp_runtime::traits::TrailingZeroInput;
 	use primitive::OrderTrait;
-	use super::helper::{
-		AccountSigners,
-		RevertReasons,
-		Confirm,
-		ResolverChoice,
-		CallExecuted
+	use sp_io::hashing::blake2_256;
+	use sp_runtime::{
+		parameter_types,
+		traits::{StaticLookup, TrailingZeroInput},
 	};
+	use sp_std::vec::Vec;
 
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
-	pub(super) type AccountOf<T> =<T as frame_system::Config>::AccountId;
+	pub(super) type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	pub(super) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountOf<T>>>::Balance;
 	parameter_types! {
 		pub const MaxSigners: u16 = 2;
@@ -72,61 +63,68 @@ pub mod pallet {
 	pub trait Config: frame_system::Config + pallet_balances::Config {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		//type Order: OrderTrait + TypeInfo + Decode + Encode + Clone + PartialEq + Debug;
-		type Currency : Currency<Self::AccountId>;
+		type Currency: Currency<Self::AccountId>;
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_resolver)]
-	pub(super) type ResolverSigner<T: Config> = StorageValue<_,T::AccountId>;
+	pub(super) type ResolverSigner<T: Config> = StorageValue<_, T::AccountId>;
 
 	// Number of multi-sig transactions done by a specific account_id
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn get_account_multitxns)]
-	pub(super) type AccountMultiTxns<T: Config> = StorageMap<_,Blake2_256, T::AccountId, Vec<CallExecuted<T>>, ValueQuery>;
+	pub(super) type AccountMultiTxns<T: Config> =
+		StorageMap<_, Blake2_256, T::AccountId, Vec<CallExecuted<T>>, ValueQuery>;
 
-	// Introduced StorageMap because this storage should contain more  than one instance of AccountSigners
+	// Introduced StorageMap because this storage should contain more  than one instance of
+	// AccountSigners
 
 	#[pallet::storage]
 	#[pallet::unbounded]
 	#[pallet::getter(fn get_allowed_signers)]
-	pub(super) type AllowedSigners<T: Config> = StorageMap<_,Blake2_256,T::AccountId,AccountSigners<T>>;
+	pub(super) type AllowedSigners<T: Config> =
+		StorageMap<_, Blake2_256, T::AccountId, AccountSigners<T>>;
 
 	// 1. Change confirmed signers to be StorageMap and key to be the payer's address
 	// 2. Change the way confirmed addresses are stored and make sure the payer starts
-	// 3. and clear the storage once the call is executed, clear multi_id account and confirmed and allowed signers
+	// 3. and clear the storage once the call is executed, clear multi_id account and confirmed and
+	// allowed signers
 	#[pallet::storage]
 	#[pallet::getter(fn get_signers)]
-	pub(super) type ConfirmedSigners<T: Config> = StorageValue<_,BoundedVec<T::AccountId, MaxSigners>,ValueQuery>;
+	pub(super) type ConfirmedSigners<T: Config> =
+		StorageValue<_, BoundedVec<T::AccountId, MaxSigners>, ValueQuery>;
 
 	// Number of reverted or faulty transaction a payer did
 	#[pallet::storage]
 	#[pallet::getter(fn get_failed_txn_payer)]
-	pub(super) type RevertedTxnPayer<T: Config> = StorageMap<_,Blake2_256,T::AccountId,u32,ValueQuery>;
+	pub(super) type RevertedTxnPayer<T: Config> =
+		StorageMap<_, Blake2_256, T::AccountId, u32, ValueQuery>;
 
 	// Number of reverted or faulty transaction a payee did
 	#[pallet::storage]
 	#[pallet::getter(fn get_failed_txn_payee)]
-	pub(super) type RevertedTxnPayee<T: Config> = StorageMap<_,Blake2_256,T::AccountId,u32,ValueQuery>;
+	pub(super) type RevertedTxnPayee<T: Config> =
+		StorageMap<_, Blake2_256, T::AccountId, u32, ValueQuery>;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config>{
-		CallExecuted{
+	pub enum Event<T: Config> {
+		CallExecuted {
 			multi_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		},
 		MultiAccountCreated {
 			account_id: T::AccountId,
-			timestamp: T::BlockNumber
+			timestamp: T::BlockNumber,
 		},
 		BalanceTransferredAndLocked {
 			to_multi_id: T::AccountId,
 			from: T::AccountId,
-			timestamp: T::BlockNumber
+			timestamp: T::BlockNumber,
 		},
 		PayeeAddressConfirmed {
-			account_id:T::AccountId,
+			account_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		},
 		PayerAddressConfirmed {
@@ -139,12 +137,10 @@ pub mod pallet {
 			amount: BalanceOf<T>,
 			resolver: Option<ResolverChoice>,
 			timestamp: T::BlockNumber,
-		}
-
-
+		},
 	}
 	#[pallet::error]
-	pub enum Error<T>{
+	pub enum Error<T> {
 		// Any system error
 		UnexpectedError,
 
@@ -157,7 +153,7 @@ pub mod pallet {
 		PayerAlreadyConfirmed,
 		PayeeAlreadyConfirmed,
 		NotAllowedPayeeOrPaymentNotInitialized,
-		MultiSigCallFailed
+		MultiSigCallFailed,
 	}
 
 	#[pallet::call]
@@ -176,139 +172,143 @@ pub mod pallet {
 			// Third parameter will be a type that implements Order trait from primitive
 			//order: Option<T::Order>
 		) -> DispatchResult {
-
 			let payer = ensure_signed(origin)?;
 			let payee = payee.ok_or(Error::<T>::UnexpectedError)?;
-			let payee = <<T as frame_system::Config>::Lookup as StaticLookup>
-														::lookup(payee)?;
+			let payee = <<T as frame_system::Config>::Lookup as StaticLookup>::lookup(payee)?;
 
 			match resolver {
 				ResolverChoice::None => {
 					Self::inner_vane_pay_wo_resolver(payer.clone(), payee.clone(), amount)?;
 					let time = <frame_system::Pallet<T>>::block_number();
 
-				   	Self::deposit_event(Event::SubmittedPayment {
+					Self::deposit_event(Event::SubmittedPayment {
 						from_account: payer,
 						to_account: payee,
 						amount,
 						resolver: None,
-						timestamp: time
+						timestamp: time,
 					})
 				},
-				_=> ()
+				_ => (),
 			}
 
 			Ok(())
 		}
 
-		// Get the confirm account address and store them in Signers Storage Item. Sort and make sure
-		// buyer's address is first
+		// Get the confirm account address and store them in Signers Storage Item. Sort and make
+		// sure buyer's address is first
 		// Always make sure if its the buyer, he should be first in the vector,
 		// 		1. Store the account_id in the Signer Storage Item,
 		// 		2. Then next steps will follow after this,
 
 		#[pallet::weight(10)]
-		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm) ->DispatchResult{
-
+		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm) -> DispatchResult {
 			// 1. Check if 0 index is a occupied and if true check if its a Payee if true return Err
 			// 2. If its not a Payee then add new account which it will be a Payer
-			// 3. If index 0 is not occupied then check if the address is a Payer, if its true return Err
-			// 4. If the address is a Payee then push it to the vec.
+			// 3. If index 0 is not occupied then check if the address is a Payer, if its true
+			// return Err 4. If the address is a Payee then push it to the vec.
 			//---------------------------------------------------------------------------------------//
-			// This will ensure that in 0th index is always Payee address and the Payer cannot confirm first
-
+			// This will ensure that in 0th index is always Payee address and the Payer cannot
+			// confirm first
 
 			let user_account = ensure_signed(origin)?;
 			// Check the storage
 			let b_vec = ConfirmedSigners::<T>::get();
 
-			if let Some(addr) = b_vec.get(0){
-				if addr.eq(&user_account){
+			if let Some(addr) = b_vec.get(0) {
+				if addr.eq(&user_account) {
 					return Err(Error::<T>::PayeeAlreadyConfirmed.into())
-				}else{
-
-					ConfirmedSigners::<T>::try_mutate(|vec|{
-						vec.try_push(user_account.clone())
-					}).map_err(|_|Error::<T>::ExceededSigners)?;
+				} else {
+					ConfirmedSigners::<T>::try_mutate(|vec| vec.try_push(user_account.clone()))
+						.map_err(|_| Error::<T>::ExceededSigners)?;
 
 					let time = <frame_system::Pallet<T>>::block_number();
 
-					Self::deposit_event(Event::PayerAddressConfirmed{
-							account_id:user_account,
-							timestamp: time
-					    }
-					);
+					Self::deposit_event(Event::PayerAddressConfirmed {
+						account_id: user_account,
+						timestamp: time,
+					});
 
 					// Construct AccountSigner object from ConfirmedSigners storage
 
 					let ConfirmedAccSigners = AccountSigners::<T>::new(
-						ConfirmedSigners::<T>::get().get(0).ok_or(Error::<T>::UnexpectedError)?.clone(),
-						ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?.clone(),
+						ConfirmedSigners::<T>::get()
+							.get(0)
+							.ok_or(Error::<T>::UnexpectedError)?
+							.clone(),
+						ConfirmedSigners::<T>::get()
+							.get(1)
+							.ok_or(Error::<T>::UnexpectedError)?
+							.clone(),
 						// The default resolver is none but logic will be made to be customizable
-						None
+						None,
 					);
 
-					// Derive the multi_id of newly constructed AccountSigner and one from AllowedSigners
+					// Derive the multi_id of newly constructed AccountSigner and one from
+					// AllowedSigners
 					let confirmed_multi_id = Self::derive_multi_id(ConfirmedAccSigners);
 
 					// Get the AllowedSigners from storage
-					let payer = ConfirmedSigners::<T>::get().get(1).ok_or(Error::<T>::UnexpectedError)?.clone();
-					let payee = ConfirmedSigners::<T>::get().get(0).ok_or(Error::<T>::UnexpectedError)?.clone();
+					let payer = ConfirmedSigners::<T>::get()
+						.get(1)
+						.ok_or(Error::<T>::UnexpectedError)?
+						.clone();
+					let payee = ConfirmedSigners::<T>::get()
+						.get(0)
+						.ok_or(Error::<T>::UnexpectedError)?
+						.clone();
 
-					let allowed_signers = AllowedSigners::<T>::get(payer.clone()).ok_or(Error::<T>::NotAllowedPayeeOrPaymentNotInitialized)?;
-
+					let allowed_signers = AllowedSigners::<T>::get(payer.clone())
+						.ok_or(Error::<T>::NotAllowedPayeeOrPaymentNotInitialized)?;
 
 					let allowed_multi_id = Self::derive_multi_id(allowed_signers);
 					// Compute the hash of both multi_ids (proof)
-					if confirmed_multi_id.eq(&allowed_multi_id){
-						let encoded_proof = (allowed_multi_id.clone(), confirmed_multi_id.clone()).using_encoded(blake2_256);
-						let proof = Decode::decode(&mut TrailingZeroInput::new(encoded_proof.as_ref()))
-							.map_err(|_|Error::<T>::UnexpectedError)?;
+					if confirmed_multi_id.eq(&allowed_multi_id) {
+						let encoded_proof = (allowed_multi_id.clone(), confirmed_multi_id.clone())
+							.using_encoded(blake2_256);
+						let proof =
+							Decode::decode(&mut TrailingZeroInput::new(encoded_proof.as_ref()))
+								.map_err(|_| Error::<T>::UnexpectedError)?;
 
-
-						Self::dispatch_transfer_call(proof, payer, payee, allowed_multi_id, confirmed_multi_id)?;
-
-					}else{
+						Self::dispatch_transfer_call(
+							proof,
+							payer,
+							payee,
+							allowed_multi_id,
+							confirmed_multi_id,
+						)?;
+					} else {
 						return Err(Error::<T>::FailedToMatchAccounts.into())
 					}
-
 				}
-			}else{
-
+			} else {
 				match who {
 					Confirm::Payer => return Err(Error::<T>::WaitForPayeeToConfirm.into()),
 
 					Confirm::Payee => {
-
-						ConfirmedSigners::<T>::try_mutate(|vec|{
-							vec.try_push(user_account.clone())
-						}).map_err(|_|Error::<T>::ExceededSigners)?;
+						ConfirmedSigners::<T>::try_mutate(|vec| vec.try_push(user_account.clone()))
+							.map_err(|_| Error::<T>::ExceededSigners)?;
 
 						let time = <frame_system::Pallet<T>>::block_number();
 
-						Self::deposit_event(Event::PayeeAddressConfirmed{
-							account_id:user_account,
-							timestamp: time
-						  }
-						);
-
-					}
+						Self::deposit_event(Event::PayeeAddressConfirmed {
+							account_id: user_account,
+							timestamp: time,
+						});
+					},
 				};
-
 			};
 
 			Ok(())
 		}
 
-
-		// If the payer accidently makes a mistake due to RevertReasons the funds can be refunded back
-		// Punishment will occur if the reason is personal.
+		// If the payer accidently makes a mistake due to RevertReasons the funds can be refunded
+		// back Punishment will occur if the reason is personal.
 
 		// We should introduce some sort of limit for WrongAddress reason occurrence.
 		#[pallet::weight(10)]
-		pub fn revert_fund(origin:OriginFor<T>, reason:RevertReasons) -> DispatchResult{
+		pub fn revert_fund(origin: OriginFor<T>, reason: RevertReasons) -> DispatchResult {
 			Ok(())
 		}
 	}
-
 }

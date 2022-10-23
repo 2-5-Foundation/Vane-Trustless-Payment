@@ -1,7 +1,7 @@
 use crate as pallet_multisig_payment;
-use pallet_balances;
-use frame_support::traits::{ConstU16, ConstU64,ConstU128, ConstU32};
+use frame_support::traits::{ConstU128, ConstU16, ConstU32, ConstU64};
 use frame_system as system;
+use pallet_balances;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -67,7 +67,6 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 }
 
-
 impl pallet_multisig_payment::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
@@ -79,8 +78,8 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	pallet_balances::GenesisConfig::<Test> {
 		balances: vec![(1, 1_000_000), (2, 100_000), (3, 70000), (4, 120000), (5, 1000)],
 	}
-		.assimilate_storage(&mut t)
-		.unwrap();
+	.assimilate_storage(&mut t)
+	.unwrap();
 	let mut ext = sp_io::TestExternalities::new(t);
 	ext.execute_with(|| System::set_block_number(1));
 	ext
