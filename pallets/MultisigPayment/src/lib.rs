@@ -54,6 +54,8 @@ pub mod pallet {
 	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 	pub(super) type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	pub(super) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountOf<T>>>::Balance;
+
+	// Max signers for Confirm Signers Bounded Vec
 	parameter_types! {
 		pub const MaxSigners: u16 = 2;
 	}
@@ -68,6 +70,7 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId>;
 	}
 
+	// Not yet implemented
 	#[pallet::storage]
 	#[pallet::getter(fn get_resolver)]
 	pub(super) type ResolverSigner<T: Config> = StorageValue<_, T::AccountId>;
