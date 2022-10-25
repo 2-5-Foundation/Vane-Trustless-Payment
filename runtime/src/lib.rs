@@ -92,8 +92,8 @@ pub mod opaque {
 // https://docs.substrate.io/main-docs/build/upgrade#runtime-versioning
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("node-template"),
-	impl_name: create_runtime_str!("node-template"),
+	spec_name: create_runtime_str!("vane-node"),
+	impl_name: create_runtime_str!("vane-node"),
 	authoring_version: 1,
 	// The version of the runtime specification. A full node will not attempt to use its native
 	//   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
@@ -290,7 +290,6 @@ construct_runtime!(
 		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
-
 		VanePayment: pallet_multisig_payment,
 	}
 );

@@ -30,6 +30,8 @@ mod mock;
 mod helper;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod benchmarking;
 
 //#[cfg(feature = "runtime-benchmarks")]
 //mod benchmarking;
@@ -92,6 +94,9 @@ pub mod pallet {
 	// allowed signers
 	#[pallet::storage]
 	#[pallet::getter(fn get_signers)]
+
+	// Jibril change it to be storageMap and key to be multi_id,
+	// Introduce new stoarge value for multi_id created from Allowed Signers
 	pub(super) type ConfirmedSigners<T: Config> =
 		StorageValue<_, BoundedVec<T::AccountId, MaxSigners>, ValueQuery>;
 
@@ -215,11 +220,31 @@ pub mod pallet {
 			// Check the storage
 			let b_vec = ConfirmedSigners::<T>::get();
 
+			// Jessi           Jibril
+			//  -                -
+			//  -                -
+			// Vijay           Lukamba
+			//-----------------------------------
+			// Vijay         Jessi
+			//    -          -
+			//       -    -
+			//        Lukamba
+			//-----------------------------------
+			//          Vijay
+			//            -
+			//            -
+			//          Lukamba x2
+
+
 			if let Some(addr) = b_vec.get(0) {
 				if addr.eq(&user_account) {
 					return Err(Error::<T>::PayeeAlreadyConfirmed.into())
+
+					// Else for checking if payee tries to confirm twice.
 				} else {
-					ConfirmedSigners::<T>::try_mutate(|vec| vec.try_push(user_account.clone()))
+					// Jibril issue
+					ConfirmedSigners::<T>
+						::try_mutate(|vec| vec.try_push(user_account.clone()))
 						.map_err(|_| Error::<T>::ExceededSigners)?;
 
 					let time = <frame_system::Pallet<T>>::block_number();
@@ -231,7 +256,7 @@ pub mod pallet {
 
 					// Construct AccountSigner object from ConfirmedSigners storage
 
-					let ConfirmedAccSigners = AccountSigners::<T>::new(
+					let confirmed_acc_signers = AccountSigners::<T>::new(
 						ConfirmedSigners::<T>::get()
 							.get(0)
 							.ok_or(Error::<T>::UnexpectedError)?
@@ -246,7 +271,7 @@ pub mod pallet {
 
 					// Derive the multi_id of newly constructed AccountSigner and one from
 					// AllowedSigners
-					let confirmed_multi_id = Self::derive_multi_id(ConfirmedAccSigners);
+					let confirmed_multi_id = Self::derive_multi_id(confirmed_acc_signers);
 
 					// Get the AllowedSigners from storage
 					let payer = ConfirmedSigners::<T>::get()
@@ -281,6 +306,8 @@ pub mod pallet {
 						return Err(Error::<T>::FailedToMatchAccounts.into())
 					}
 				}
+
+			// Else block from If let Some()
 			} else {
 				match who {
 					Confirm::Payer => return Err(Error::<T>::WaitForPayeeToConfirm.into()),

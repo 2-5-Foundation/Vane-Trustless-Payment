@@ -235,6 +235,7 @@ pub mod utils {
 				AccountInfo::<T::Index, T::AccountData> { consumers: 1, ..Default::default() };
 
 			// Ensure the multi_id account is not yet registered in the storage
+			// Vijay you must allow to re-use multi_id if its the same payer and payee.
 			ensure!(
 				!<frame_system::Pallet<T>>::account_exists(&multi_id),
 				Error::<T>::MultiAccountExists
