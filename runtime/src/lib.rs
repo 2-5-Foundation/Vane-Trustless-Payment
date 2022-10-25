@@ -43,9 +43,7 @@ use pallet_transaction_payment::CurrencyAdapter;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-
 pub use pallet_multisig_payment;
-
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -94,8 +92,8 @@ pub mod opaque {
 // https://docs.substrate.io/main-docs/build/upgrade#runtime-versioning
 #[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-	spec_name: create_runtime_str!("node-template"),
-	impl_name: create_runtime_str!("node-template"),
+	spec_name: create_runtime_str!("vane-node"),
+	impl_name: create_runtime_str!("vane-node"),
 	authoring_version: 1,
 	// The version of the runtime specification. A full node will not attempt to use its native
 	//   runtime in substitute for the on-chain Wasm runtime unless all of `spec_name`,
@@ -266,9 +264,8 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-
 impl pallet_multisig_payment::Config for Runtime {
-	type  Event = Event;
+	type Event = Event;
 	type Currency = Balances;
 }
 
@@ -276,8 +273,6 @@ parameter_types! {
 	pub const DepositBase: Balance =  1_500;
 	pub const DepositFactor: Balance = 1_000;
 }
-
-
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -295,7 +290,6 @@ construct_runtime!(
 		Balances: pallet_balances,
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
-
 		VanePayment: pallet_multisig_payment,
 	}
 );
