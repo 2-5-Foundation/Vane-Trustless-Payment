@@ -58,11 +58,6 @@ pub mod utils {
 		Both(T::AccountId),
 	}
 
-	// New storage to store multi-id using payer as a key
-	
-	pub(super) type Multi_Id_Storage<T: Config> =
-		StorageMap<_, Blake2_256, T::AccountId, AccountSigners<T>>;
-
 
 	// This should be used as a parameter for choosing which Resolving method should take place
 	#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -244,16 +239,14 @@ pub mod utils {
 			/* Check if multi_id already exist in frame_system if exist than
 			re-use multi_id if its the same payer and payee. */
 				
-			 if !<frame_system::Pallet<T>>::account_exists(&multi_id)
-			 {
-				<frame_system::Account<T>>::get(multi_id);	
+			if !<frame_system::Pallet<T>>::account_exists(&multi_id)
+			{
+				return Ok(()) ;
 			}
 			else
 			{	// Register to frame_system Account Storage item;
-				//<frame_system::Account<T>>::set(multi_id, account_info);
-				Multi_Id_Storage::<T>::insert(<frame_system::Account<T>>::set(multi_id, account_info));
+				<frame_system::Account<T>>::set(multi_id, account_info);
 			}
-			
 		Ok(())
 	}
 
