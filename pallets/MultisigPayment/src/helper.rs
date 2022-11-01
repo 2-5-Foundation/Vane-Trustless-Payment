@@ -236,14 +236,14 @@ pub mod utils {
 
 			// Ensure the multi_id account is not yet registered in the storage
 			// Vijay you must allow to re-use multi_id if its the same payer and payee.
-			ensure!(
-				!<frame_system::Pallet<T>>::account_exists(&multi_id),
-				Error::<T>::MultiAccountExists
-			);
+			if <frame_system::Pallet<T>>::account_exists(&multi_id){
+				return Ok(())
+			}else{
+				// Register to frame_system Account Storage item;
+				<frame_system::Account<T>>::set(multi_id, account_info);
+				Ok(())
+			}
 
-			// Register to frame_system Account Storage item;
-			<frame_system::Account<T>>::set(multi_id, account_info);
-			Ok(())
 		}
 
 		// Now , we are only focusing legal team Resolver variant in multi_id generation
