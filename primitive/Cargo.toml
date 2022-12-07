@@ -1,5 +1,5 @@
 [package]
-name = "primitive"
+name = "vane-primitive"
 version = "1.0.0-dev"
 edition = "2021"
 authors = ["Mrisho Lukamba"]
@@ -11,4 +11,12 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 	"derive",
 ] }
 scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-sp-runtime = { version = "6.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+frame-system = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+frame-support = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.28" }
+
+[features]
+default = ["std"]
+std = [
+	"frame-system/std",
+	"frame-support/std"
+]

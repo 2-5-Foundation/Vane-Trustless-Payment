@@ -43,7 +43,7 @@ pub mod pallet {
 	use super::helper::{AccountSigners, CallExecuted, Confirm, ResolverChoice, RevertReasons};
 	use frame_support::{pallet, pallet_prelude::*, traits::tokens::currency::Currency};
 	use frame_system::pallet_prelude::*;
-	use primitive::OrderTrait;
+	use vane_primitive::OrderTrait;
 	use sp_io::hashing::blake2_256;
 	use sp_runtime::{
 		parameter_types,

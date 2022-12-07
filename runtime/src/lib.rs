@@ -44,7 +44,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
 pub use pallet_multisig_payment;
-
+pub use vane_primitive::VaneAccountData;
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -57,6 +57,9 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 
 /// Balance of an account.
 pub type Balance = u128;
+
+/// Reference number of multi-sig transaction
+pub type Reference = u32;
 
 /// Index of a transaction in the chain.
 pub type Index = u32;
@@ -187,7 +190,7 @@ impl frame_system::Config for Runtime {
 	/// What to do if an account is fully reaped from the system.
 	type OnKilledAccount = ();
 	/// The data to be stored in an account.
-	type AccountData = pallet_balances::AccountData<Balance>;
+	type AccountData = VaneAccountData<Balance,Reference>;
 	/// Weight information for the extrinsics of this pallet.
 	type SystemWeightInfo = ();
 	/// This is used as an identifier of the chain. 42 is the generic substrate prefix.
