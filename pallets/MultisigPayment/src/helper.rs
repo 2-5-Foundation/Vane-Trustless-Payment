@@ -17,6 +17,7 @@ use frame_system::pallet_prelude::*;
 use sp_runtime::{traits::TrailingZeroInput, MultiAddress};
 use sp_std::mem::drop;
 
+
 pub use utils::*;
 pub mod utils {
 	use super::*;
@@ -56,6 +57,7 @@ pub mod utils {
 		//some future time feature
 		Both(T::AccountId),
 	}
+
 
 	// This should be used as a parameter for choosing which Resolving method should take place
 	#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
@@ -234,17 +236,19 @@ pub mod utils {
 			let account_info =
 				AccountInfo::<T::Index, T::AccountData> {..Default::default() };
 
-			// Ensure the multi_id account is not yet registered in the storage
-			// Vijay you must allow to re-use multi_id if its the same payer and payee.
-			if <frame_system::Pallet<T>>::account_exists(&multi_id){
-				return Ok(())
-			}else{
-				// Register to frame_system Account Storage item;
-				<frame_system::Account<T>>::set(multi_id, account_info);
-				Ok(())
+			/* Check if multi_id already exist in frame_system if exist than
+			re-use multi_id if its the same payer and payee. */
+				
+			if !<frame_system::Pallet<T>>::account_exists(&multi_id)
+			{
+				return Ok(()) ;
 			}
-
-		}
+			else
+			{	// Register to frame_system Account Storage item;
+				<frame_system::Account<T>>::set(multi_id, account_info);
+			}
+		Ok(())
+	}
 
 		// Now , we are only focusing legal team Resolver variant in multi_id generation
 		// We can do better on this function definition
