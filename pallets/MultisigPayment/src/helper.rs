@@ -232,7 +232,7 @@ pub mod utils {
 
 		pub(crate) fn create_multi_account(multi_id: T::AccountId) -> DispatchResult {
 			let account_info =
-				AccountInfo::<T::Index, T::AccountData> { consumers: 1, ..Default::default() };
+				AccountInfo::<T::Index, T::AccountData> {..Default::default() };
 
 			// Ensure the multi_id account is not yet registered in the storage
 			// Vijay you must allow to re-use multi_id if its the same payer and payee.
