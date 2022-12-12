@@ -44,7 +44,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
 pub use pallet_multisig_payment;
-pub use vane_primitive::VaneAccountData;
+
 /// An index to a block.
 pub type BlockNumber = u32;
 
