@@ -51,7 +51,7 @@ pub mod pallet {
 	};
 	use sp_std::vec::Vec;
 
-	pub(super) type AccountFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
+
 	pub(super) type AccountOf<T> = <T as frame_system::Config>::AccountId;
 	pub(super) type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountOf<T>>>::Balance;
 
@@ -64,7 +64,7 @@ pub mod pallet {
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_balances::Config {
+	pub trait Config: frame_system::Config + pallet_balances::Config  {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		//type Order: OrderTrait + TypeInfo + Decode + Encode + Clone + PartialEq + Debug;
 		type Currency: Currency<Self::AccountId>;
@@ -101,7 +101,7 @@ pub mod pallet {
 	// Jibril change it to be storageMap and key to be multi_id,
 	// Introduce new stoarge value for multi_id created from Allowed Signers
 	pub(super) type ConfirmedSigners<T: Config> =
-		StorageValue<_, BoundedVec<T::AccountId, MaxSigners>, ValueQuery>;
+		StorageMap<_,Twox64Concat, u32, BoundedVec<T::AccountId, MaxSigners>, ValueQuery>;
 
 	// Number of reverted or faulty transaction a payer did
 	#[pallet::storage]
@@ -122,23 +122,28 @@ pub mod pallet {
 			multi_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		},
+
 		MultiAccountCreated {
 			account_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		},
+
 		BalanceTransferredAndLocked {
 			to_multi_id: T::AccountId,
 			from: T::AccountId,
 			timestamp: T::BlockNumber,
 		},
+
 		PayeeAddressConfirmed {
 			account_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		},
+
 		PayerAddressConfirmed {
 			account_id: T::AccountId,
 			timestamp: T::BlockNumber,
 		},
+
 		SubmittedPayment {
 			from_account: T::AccountId,
 			to_account: T::AccountId,
@@ -147,20 +152,30 @@ pub mod pallet {
 			timestamp: T::BlockNumber,
 		},
 	}
+
 	#[pallet::error]
 	pub enum Error<T> {
 		// Any system error
 		UnexpectedError,
 
 		FailedToMatchAccounts,
+
 		MultiAccountExists,
+
 		ExceededSigners,
+
 		AccountAlreadyExist,
+
 		WaitForPayeeToConfirm,
+
 		WaitForPayerToConfirm,
+
 		PayerAlreadyConfirmed,
+
 		PayeeAlreadyConfirmed,
+
 		NotAllowedPayeeOrPaymentNotInitialized,
+
 		MultiSigCallFailed,
 	}
 
@@ -174,15 +189,17 @@ pub mod pallet {
 		#[pallet::weight(10)]
 		pub fn vane_pay(
 			origin: OriginFor<T>,
-			payee: Option<AccountFor<T>>,
+			payee: Option<T::AccountId>,
 			amount: BalanceOf<T>,
 			resolver: ResolverChoice,
 			// Third parameter will be a type that implements Order trait from primitive
 			//order: Option<T::Order>
 		) -> DispatchResult {
+			// 1. Check if the Payee is in the Register Storage
+			// 2.
 			let payer = ensure_signed(origin)?;
 			let payee = payee.ok_or(Error::<T>::UnexpectedError)?;
-			let payee = <<T as frame_system::Config>::Lookup as StaticLookup>::lookup(payee)?;
+
 
 			match resolver {
 				ResolverChoice::None => {
@@ -210,7 +227,7 @@ pub mod pallet {
 		// 		2. Then next steps will follow after this,
 
 		#[pallet::weight(10)]
-		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm) -> DispatchResult {
+		pub fn confirm_pay(origin: OriginFor<T>, who: Confirm, reference_no: u32) -> DispatchResult {
 			// 1. Check if 0 index is a occupied and if true check if its a Payee if true return Err
 			// 2. If its not a Payee then add new account which it will be a Payer
 			// 3. If index 0 is not occupied then check if the address is a Payer, if its true
@@ -221,22 +238,7 @@ pub mod pallet {
 
 			let user_account = ensure_signed(origin)?;
 			// Check the storage
-			let b_vec = ConfirmedSigners::<T>::get();
-
-			// Jessi           Jibril
-			//  -                -
-			//  -                -
-			// Vijay           Lukamba
-			//-----------------------------------
-			// Vijay         Jessi
-			//    -          -
-			//       -    -
-			//        Lukamba
-			//-----------------------------------
-			//          Vijay
-			//            -
-			//            -
-			//          Lukamba x2
+			let b_vec = ConfirmedSigners::<T>::get(reference_no);
 
 
 			if let Some(addr) = b_vec.get(0) {
@@ -245,9 +247,9 @@ pub mod pallet {
 
 					// Else for checking if payee tries to confirm twice.
 				} else {
-					// Jibril issue
+
 					ConfirmedSigners::<T>
-						::try_mutate(|vec| vec.try_push(user_account.clone()))
+						::try_mutate(reference_no, |vec| vec.try_push(user_account.clone()))
 						.map_err(|_| Error::<T>::ExceededSigners)?;
 
 					let time = <frame_system::Pallet<T>>::block_number();
@@ -260,11 +262,12 @@ pub mod pallet {
 					// Construct AccountSigner object from ConfirmedSigners storage
 
 					let confirmed_acc_signers = AccountSigners::<T>::new(
-						ConfirmedSigners::<T>::get()
+						ConfirmedSigners::<T>::get(reference_no)
 							.get(0)
 							.ok_or(Error::<T>::UnexpectedError)?
 							.clone(),
-						ConfirmedSigners::<T>::get()
+
+						ConfirmedSigners::<T>::get(reference_no)
 							.get(1)
 							.ok_or(Error::<T>::UnexpectedError)?
 							.clone(),
@@ -277,11 +280,12 @@ pub mod pallet {
 					let confirmed_multi_id = Self::derive_multi_id(confirmed_acc_signers);
 
 					// Get the AllowedSigners from storage
-					let payer = ConfirmedSigners::<T>::get()
+					let payer = ConfirmedSigners::<T>::get(reference_no)
 						.get(1)
 						.ok_or(Error::<T>::UnexpectedError)?
 						.clone();
-					let payee = ConfirmedSigners::<T>::get()
+
+					let payee = ConfirmedSigners::<T>::get(reference_no)
 						.get(0)
 						.ok_or(Error::<T>::UnexpectedError)?
 						.clone();
@@ -316,7 +320,7 @@ pub mod pallet {
 					Confirm::Payer => return Err(Error::<T>::WaitForPayeeToConfirm.into()),
 
 					Confirm::Payee => {
-						ConfirmedSigners::<T>::try_mutate(|vec| vec.try_push(user_account.clone()))
+						ConfirmedSigners::<T>::try_mutate(reference_no,|vec| vec.try_push(user_account.clone()))
 							.map_err(|_| Error::<T>::ExceededSigners)?;
 
 						let time = <frame_system::Pallet<T>>::block_number();

@@ -166,6 +166,7 @@ pub mod utils {
 		) -> DispatchResult {
 			let accounts = AccountSigners::<T>::new(payee, payer.clone(), None);
 			let multi_id = Self::derive_multi_id(accounts.clone());
+
 			AllowedSigners::<T>::insert(&payer, accounts);
 			Self::create_multi_account(multi_id.clone())?;
 
